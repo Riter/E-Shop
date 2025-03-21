@@ -11,4 +11,5 @@ type Product struct {
 	Price       float64   `json:"price"`
 	Category    string    `json:"category"`
 	CreatedAt   time.Time `json:"created_at"`
+	Images      []string  `json:"images"`
 }

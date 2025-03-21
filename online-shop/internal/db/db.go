@@ -10,24 +10,24 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var DB *sql.DB
+var PsqlDB *sql.DB
 
-func InitDB() {
+func InitPsqlDB() {
 	cfg := config.LoadConfig()
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
 	var err error
-	DB, err = sql.Open("postgres", dsn)
+	PsqlDB, err = sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal("Ошибка подключения к БД:", err)
 	}
 
-	DB.SetMaxOpenConns(cfg.DBMaxOpenConns)
-	DB.SetMaxIdleConns(cfg.DBMaxIdleConns)
-	DB.SetConnMaxLifetime(time.Duration(cfg.DBMaxConnLifeTime) * time.Minute)
+	PsqlDB.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	PsqlDB.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	PsqlDB.SetConnMaxLifetime(time.Duration(cfg.DBMaxConnLifeTime) * time.Minute)
 
-	err = DB.Ping()
+	err = PsqlDB.Ping()
 	if err != nil {
 		log.Fatal("Не удалось подключиться к БД:", err)
 	}
