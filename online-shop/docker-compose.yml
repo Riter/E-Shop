@@ -38,15 +38,16 @@ services:
   elasticsearch:
     image: elasticsearch:8.5.0
     container_name: elasticsearch
+    env_file:
+      - environment/elastic.env  # Подключаем .env
     environment:
       - discovery.type=single-node
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # Ограничение памяти (не относится к Go, это для самого ES)
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
-    restart: always
+    restart: on-failure:5
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"]
       interval: 30s
