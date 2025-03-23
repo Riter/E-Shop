@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"log"
 	"online-shop/internal/models"
 
 	"github.com/minio/minio-go/v7"
@@ -61,4 +62,32 @@ func (r *ProductRepo) getProductImages(productID int) ([]string, error) {
 		images = append(images, imageURL)
 	}
 	return images, nil
+}
+
+func (r *ProductRepo) GetALLProducts() ([]models.Product, error) {
+	/*
+		Эта функция нужна для того чтобы получать все товары из БД (и все их текстовые характеристики),
+		при этом она не возвращает ссылкин на картинки для товаров
+	*/
+	rows, err := r.PsqlDb.Query("SELECT ID, Name, Description, Price, Category, CreatedAt")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		var p models.Product
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.Price, &p.Category, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	log.Printf("Загружено %d товаров из PostgreSQL", len(products))
+	return products, nil
 }
