@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+
 	//"net/http"
 	"online-shop/internal/db"
 	"online-shop/internal/elasticsearch"
@@ -15,7 +16,7 @@ import (
 func main() {
 	db.InitPsqlDB()
 	db.InitMinio()
-	elscticClient, err := elasticsearch.NewESClient("localhost:9200")
+	elscticClient, err := elasticsearch.NewESClient("http://localhost:9200")
 	if err != nil {
 		log.Fatal("ошибка при создании клиента elastic: %w", err)
 	}
