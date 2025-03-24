@@ -18,11 +18,13 @@ func NewElasticManager(repo *repository.ProductRepo, elastic *elasticsearch.ESCl
 func (s *ElasticManager) SyncProductsToElasticSearch() error {
 	products, err := s.Repo.GetALLProducts()
 	if err != nil {
+		log.Println("ошибка из функции получения товаров: %w", err)
 		return err
 	}
 
 	err = s.Elastic.IndexProducts(products)
 	if err != nil {
+		log.Println("ошибка из функции индексации продуктов: %w", err)
 		return err
 	}
 

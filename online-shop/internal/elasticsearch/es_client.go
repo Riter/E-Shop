@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"online-shop/config"
+
 	"online-shop/internal/models"
 
 	"github.com/elastic/go-elasticsearch/v8"
@@ -14,9 +16,12 @@ type ESClient struct {
 	Client *elasticsearch.Client
 }
 
-func NewESClient(elasticUrl string) (*ESClient, error) {
+func NewESClient() (*ESClient, error) {
+	input_cfg := config.LoadEsConfig()
 	cfg := elasticsearch.Config{
-		Addresses: []string{elasticUrl},
+		Addresses: []string{input_cfg.ElasticURL},
+		Username:  input_cfg.ElasticUser,
+		Password:  input_cfg.ElasticPassword,
 	}
 
 	client, err := elasticsearch.NewClient(cfg)
@@ -28,7 +33,6 @@ func NewESClient(elasticUrl string) (*ESClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ошибка во время получения информации от elastic: %w", err)
 	}
-	log.Printf("щас print res")
 	log.Println(res)
 
 	return &ESClient{Client: client}, nil

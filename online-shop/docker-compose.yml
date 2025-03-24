@@ -43,8 +43,12 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.http.ssl.enabled=false
+      - TZ=Europe/Moscow
+
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - "9200:9200"
       - "9300:9300"
