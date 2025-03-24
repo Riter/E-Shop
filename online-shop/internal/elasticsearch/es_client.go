@@ -28,6 +28,7 @@ func NewESClient(elasticUrl string) (*ESClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ошибка во время получения информации от elastic: %w", err)
 	}
+	log.Printf("щас print res")
 	log.Println(res)
 
 	return &ESClient{Client: client}, nil

@@ -6,16 +6,16 @@ import (
 	"online-shop/internal/repository"
 )
 
-type IndexService struct {
+type ElasticManager struct {
 	Repo    *repository.ProductRepo
 	Elastic *elasticsearch.ESClient
 }
 
-func NewIndexService(repo *repository.ProductRepo, elastic *elasticsearch.ESClient) *IndexService {
-	return &IndexService{Repo: repo, Elastic: elastic}
+func NewElasticManager(repo *repository.ProductRepo, elastic *elasticsearch.ESClient) *ElasticManager {
+	return &ElasticManager{Repo: repo, Elastic: elastic}
 }
 
-func (s *IndexService) SyncProductsToElasticSearch() error {
+func (s *ElasticManager) SyncProductsToElasticSearch() error {
 	products, err := s.Repo.GetALLProducts()
 	if err != nil {
 		return err

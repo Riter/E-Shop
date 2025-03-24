@@ -25,7 +25,7 @@ func main() {
 	searchService := services.NewSearchService(productRepo)
 	searchHandler := handlers.NewSearchHandler(searchService)
 
-	indexServese := services.NewIndexService(productRepo, elscticClient)
+	indexServese := services.NewElasticManager(productRepo, elscticClient)
 	indexServese.SyncProductsToElasticSearch()
 
 	r := chi.NewRouter()
