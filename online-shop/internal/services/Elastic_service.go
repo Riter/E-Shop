@@ -1,7 +1,9 @@
 package services
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 	"online-shop/internal/elasticsearch"
 	"online-shop/internal/repository"
 )
@@ -30,4 +32,21 @@ func (s *ElasticManager) SyncProductsToElasticSearch() error {
 
 	log.Println("Все товары успешно загружены в Elasticsearch")
 	return nil
+}
+
+func (s *ElasticManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "параметр 'q' обязателен", http.StatusBadRequest)
+		return
+	}
+
+	products, err := s.Elastic.SearchProducts(query)
+	if err != nil {
+		http.Error(w, "ошибка поиска товаров", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(products)
 }

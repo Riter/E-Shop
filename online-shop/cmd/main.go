@@ -2,8 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
 
-	//"net/http"
 	"online-shop/internal/db"
 	"online-shop/internal/elasticsearch"
 	"online-shop/internal/handlers"
@@ -16,7 +16,7 @@ import (
 func main() {
 	db.InitPsqlDB()
 	db.InitMinio()
-	elscticClient, err := elasticsearch.NewESClient()
+	elascticClient, err := elasticsearch.NewESClient()
 	if err != nil {
 		log.Fatal("ошибка при создании клиента elastic: %w", err)
 	}
@@ -25,14 +25,15 @@ func main() {
 	searchService := services.NewSearchService(productRepo)
 	searchHandler := handlers.NewSearchHandler(searchService)
 
-	indexServese := services.NewElasticManager(productRepo, elscticClient)
-	indexServese.SyncProductsToElasticSearch()
+	elasticManager := services.NewElasticManager(productRepo, elascticClient)
+	elasticManager.SyncProductsToElasticSearch()
 
 	r := chi.NewRouter()
+	r.Get("/search", elasticManager.ServeHTTP)
 
 	searchHandler.SetupRoutes(r)
 
-	// log.Println("Сервер запущен на порту 8080")
-	// log.Fatal(http.ListenAndServe(":8080", r))
+	log.Println("Сервер запущен на порту 8080")
+	log.Fatal(http.ListenAndServe(":8080", r))
 
 }

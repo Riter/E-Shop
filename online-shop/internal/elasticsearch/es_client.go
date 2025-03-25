@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"online-shop/config"
+	"strconv"
 
 	"online-shop/internal/models"
 
@@ -46,13 +47,57 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 		}
 
 		req := bytes.NewReader(data)
-		res, err := es.Client.Index("products", req)
+		res, err := es.Client.Index("products", req, es.Client.Index.WithDocumentID(strconv.Itoa(product.ID)))
 		if err != nil {
 			return fmt.Errorf("ошибка при индексации продукта: %w", err)
 		}
 		defer res.Body.Close()
 
-		log.Printf("Товар %s добавлен в Elasticsearch", product.Name)
+		log.Printf("Товар %s добавлен/обновлен в Elasticsearch", product.Name)
 	}
 	return nil
+}
+
+func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
+	searchBody := map[string]interface{}{
+		"query": map[string]interface{}{
+			"multy_match": map[string]interface{}{
+				"query":  query,
+				"fields": []string{"name", "description"}, //поля по которым идет поиск
+			},
+		},
+	}
+
+	body, err := json.Marshal(searchBody)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка сериализации поискового запроса: %w", err)
+	}
+
+	res, err := es.Client.Search(
+		es.Client.Search.WithIndex("products"),
+		es.Client.Search.WithBody(bytes.NewReader(body)),
+		es.Client.Search.WithPretty(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка выполнения поискового запроса: %w", err)
+	}
+	defer res.Body.Close()
+
+	var searchResult struct {
+		Hits struct {
+			Hits []struct {
+				Source models.Product `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&searchResult); err != nil {
+		return nil, fmt.Errorf("ошибка декодирования ответа от Elasticsearch: %w", err)
+	}
+
+	var products []models.Product
+	for _, hit := range searchResult.Hits.Hits {
+		products = append(products, hit.Source)
+	}
+
+	return products, nil
 }

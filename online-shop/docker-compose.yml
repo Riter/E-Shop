@@ -43,8 +43,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.http.ssl.enabled=false
-      - TZ=Europe/Moscow
-
+      - TZ=UTC
     volumes:
       - elastic_data:/usr/share/elasticsearch/data
       - /etc/localtime:/etc/localtime:ro
