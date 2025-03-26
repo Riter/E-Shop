@@ -43,6 +43,7 @@ func (s *ElasticManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	products, err := s.Elastic.SearchProducts(query)
 	if err != nil {
+		log.Println("ошибка поиска товаров %w", err)
 		http.Error(w, "ошибка поиска товаров", http.StatusInternalServerError)
 		return
 	}

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"online-shop/config"
-	"strconv"
-
 	"online-shop/internal/models"
+	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8"
 )
@@ -61,9 +61,9 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	searchBody := map[string]interface{}{
 		"query": map[string]interface{}{
-			"multy_match": map[string]interface{}{
+			"multi_match": map[string]interface{}{
 				"query":  query,
-				"fields": []string{"name", "description"}, //поля по которым идет поиск
+				"fields": []string{"name", "description"}, // Поля, по которым идет поиск
 			},
 		},
 	}
@@ -83,6 +83,11 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	}
 	defer res.Body.Close()
 
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения ответа от Elasticsearch: %w", err)
+	}
+
 	var searchResult struct {
 		Hits struct {
 			Hits []struct {
@@ -90,7 +95,7 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 			} `json:"hits"`
 		} `json:"hits"`
 	}
-	if err := json.NewDecoder(res.Body).Decode(&searchResult); err != nil {
+	if err := json.Unmarshal(resBody, &searchResult); err != nil {
 		return nil, fmt.Errorf("ошибка декодирования ответа от Elasticsearch: %w", err)
 	}
 

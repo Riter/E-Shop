@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"online-shop/internal/services"
 
@@ -25,6 +26,7 @@ func (h *SearchHandler) HandleSearch(w http.ResponseWriter, r *http.Request) {
 
 	products, err := h.Service.SearchProducts(query)
 	if err != nil {
+		log.Printf("Ошибка при поиске товаров, я вылетаю из серч хендлера: %v", err)
 		http.Error(w, "Failed to fetch products", http.StatusInternalServerError)
 		return
 	}
