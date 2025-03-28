@@ -57,8 +57,8 @@ go run cmd/main.go
 ### 1. Поиск товаров
 **GET** `/search?q=название_товара`
 #### Пример запроса:
-```sh
-curl -X GET "http://localhost:8080/search?q=phone"
+```
+http://localhost:8080/search?q=наушники
 ```
 #### Пример ответа:
 ```json
