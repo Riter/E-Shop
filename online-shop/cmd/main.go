@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	db.InitPsqlDB()
 	db.InitMinio()
 	elascticClient, err := elasticsearch.NewESClient()
@@ -22,9 +23,8 @@ func main() {
 	}
 
 	productRepo := repository.NewProductRepo(db.PsqlDB, db.MinioClient)
-
 	elasticManager := services.NewElasticManager(productRepo, elascticClient)
-	elasticManager.SyncProductsToElasticSearch()
+	elasticManager.EnablePeriodicSync()
 
 	r := chi.NewRouter()
 	r.Get("/search", elasticManager.ServeHTTP)
