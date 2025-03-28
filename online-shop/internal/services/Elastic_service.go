@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"online-shop/internal/elasticsearch"
 	"online-shop/internal/repository"
+	"time"
 )
 
 type ElasticManager struct {
@@ -32,6 +33,43 @@ func (s *ElasticManager) SyncProductsToElasticSearch() error {
 
 	log.Println("Все товары успешно загружены в Elasticsearch")
 	return nil
+}
+
+// func (s *ElasticManager) EnablePeriodicSync() {
+// 	err := s.SyncProductsToElasticSearch()
+// 	if err != nil {
+// 		log.Println("Синхронизация товаров с Elasticsearch не удалась %w", err)
+// 	}
+
+// 	ticker := time.NewTicker(10 * time.Minute)
+// 	defer ticker.Stop()
+// 	for range ticker.C {
+// 		log.Println("Синхронизация товаров с Elasticsearch...")
+// 		err := s.SyncProductsToElasticSearch()
+// 		if err != nil {
+// 			log.Println("Синхронизация товаров с Elasticsearch не удалась %w", err)
+// 		}
+// 	}
+// }
+
+func (s *ElasticManager) EnablePeriodicSync(minutes uint) {
+	err := s.SyncProductsToElasticSearch()
+	if err != nil {
+		log.Println("Синхронизация товаров с Elasticsearch не удалась %w", err)
+	}
+
+	ticker := time.NewTicker(time.Duration(minutes) * time.Minute)
+
+	go func() {
+		defer ticker.Stop()
+		for range ticker.C {
+			log.Println("Запуск плановой синхронизации товаров с Elasticsearch...")
+			err := s.SyncProductsToElasticSearch()
+			if err != nil {
+				log.Println("Ошибка синхронизации товаров с Elasticsearch: %w", err)
+			}
+		}
+	}()
 }
 
 func (s *ElasticManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {

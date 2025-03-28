@@ -63,7 +63,7 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 		"query": map[string]interface{}{
 			"multi_match": map[string]interface{}{
 				"query":  query,
-				"fields": []string{"name", "description"}, // Поля, по которым идет поиск
+				"fields": []string{"name", "description", "category"}, // Поля, по которым идет поиск
 			},
 		},
 	}

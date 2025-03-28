@@ -24,7 +24,7 @@ func main() {
 
 	productRepo := repository.NewProductRepo(db.PsqlDB, db.MinioClient)
 	elasticManager := services.NewElasticManager(productRepo, elascticClient)
-	elasticManager.EnablePeriodicSync()
+	elasticManager.EnablePeriodicSync(15)
 
 	r := chi.NewRouter()
 	r.Get("/search", elasticManager.ServeHTTP)
