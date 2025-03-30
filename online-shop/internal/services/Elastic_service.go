@@ -35,23 +35,6 @@ func (s *ElasticManager) SyncProductsToElasticSearch() error {
 	return nil
 }
 
-// func (s *ElasticManager) EnablePeriodicSync() {
-// 	err := s.SyncProductsToElasticSearch()
-// 	if err != nil {
-// 		log.Println("Синхронизация товаров с Elasticsearch не удалась %w", err)
-// 	}
-
-// 	ticker := time.NewTicker(10 * time.Minute)
-// 	defer ticker.Stop()
-// 	for range ticker.C {
-// 		log.Println("Синхронизация товаров с Elasticsearch...")
-// 		err := s.SyncProductsToElasticSearch()
-// 		if err != nil {
-// 			log.Println("Синхронизация товаров с Elasticsearch не удалась %w", err)
-// 		}
-// 	}
-// }
-
 func (s *ElasticManager) EnablePeriodicSync(minutes uint) {
 	err := s.SyncProductsToElasticSearch()
 	if err != nil {

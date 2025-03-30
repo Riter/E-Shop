@@ -61,9 +61,35 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	searchBody := map[string]interface{}{
 		"query": map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":  query,
-				"fields": []string{"name", "description", "category"}, // Поля, по которым идет поиск
+			"bool": map[string]interface{}{
+				"should": []map[string]interface{}{
+					{
+						"multi_match": map[string]interface{}{
+							"query":     query,
+							"fields":    []string{"name^3", "description^2", "category"},
+							"fuzziness": "AUTO", // Позволяет Elastic прощать опечатки
+						},
+					},
+					// Поиск по префиксу (autocomplete) — находит товары по началу слова
+					{
+						"prefix": map[string]interface{}{
+							"name": map[string]interface{}{
+								"value": query,
+								"boost": 2, // Усиливаем вес, чтобы совпадения по имени ценились выше
+							},
+						},
+					},
+					// Поиск по фразе с перестановкой слов
+					{
+						"match_phrase": map[string]interface{}{
+							"name": map[string]interface{}{
+								"query": query,
+								"slop":  2, // Разрешает слова стоять рядом, но в разном порядке
+							},
+						},
+					},
+				},
+				"minimum_should_match": "1",
 			},
 		},
 	}
