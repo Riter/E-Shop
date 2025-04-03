@@ -12,7 +12,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o search_service .
 
 FROM alpine:latest
 
-WORKDIR /app/cmd  # Рабочая директория для запуска
+# Рабочая директория для запуска
+WORKDIR /app/cmd
 COPY --from=builder /app/cmd/search_service .
 
 RUN apk --no-cache add ca-certificates
