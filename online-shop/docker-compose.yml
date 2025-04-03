@@ -81,6 +81,7 @@ services:
       timeout: 10s
       retries: 5
 
+# КОНТЕЙНЕР НИЖЕ ПРОСТО ДЛЯ ПРОВЕРКИ ЗАПРОСОВ В ЭТОЙ ОБЩЕЙ СЕТИ ОН НЕ НУЖЕН ДЛЯ РАБОТЫ СЕРВИСА
   test_curl:
     image: alpine:latest
     depends_on:

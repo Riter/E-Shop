@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"online-shop/config"
 
 	"online-shop/internal/db"
 	"online-shop/internal/elasticsearch"
@@ -29,7 +31,8 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/search", elasticManager.ServeHTTP)
 
-	log.Println("Сервер запущен на порту 8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	api_port := config.LoadAPIConfig().APIPort
+	log.Printf("Сервер запущен на порту %d\n", api_port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", api_port), r)) // Добавлены закрывающие скобки
 
 }

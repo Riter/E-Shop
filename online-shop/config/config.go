@@ -28,7 +28,7 @@ type Config struct {
 func LoadConfig() *Config {
 	err := godotenv.Load("../environment/.env")
 	if err != nil {
-		log.Fatalf("Error while fetching .env file for database: %v", err)
+		log.Fatalf("ошибка при получении .env файла для баз данных: %v", err)
 	}
 
 	MaxOpenConns, err := strconv.Atoi(os.Getenv("POSTGRES_MAX_OPEN_CONNS"))
