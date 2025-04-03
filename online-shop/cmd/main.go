@@ -19,7 +19,7 @@ func main() {
 	db.InitMinio()
 	elascticClient, err := elasticsearch.NewESClient()
 	if err != nil {
-		log.Fatal("ошибка при создании клиента elastic: %w", err)
+		log.Fatalf("ошибка при создании клиента elastic: %v", err)
 	}
 
 	productRepo := repository.NewProductRepo(db.PsqlDB, db.MinioClient)

@@ -62,6 +62,24 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+  
+  search_service:
+    build: .
+    container_name: search_service
+    restart: always
+    depends_on:
+      - db
+      - elasticsearch
+    env_file:
+      - environment/.env
+    ports:
+      - "8080:8080"
+    command: [ "sh", "-c", "echo 'Жду 10 сек после PostgreSQL...' && sleep 10 && echo 'Жду 30 сек после Elasticsearch...' && sleep 30 && echo 'Запускаю сервис!' && ./search_service" ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   pg_data:
