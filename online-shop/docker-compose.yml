@@ -6,7 +6,7 @@ services:
     env_file:
       - environment/.env
     ports:
-      - "5432:5432"
+      - "28371:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d  # Монтируем  папку с SQL скриптами
@@ -26,8 +26,8 @@ services:
       - minio_data:/data
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"  
-      - "9001:9001"  
+      - "29045:9000"  
+      - "29046:9001"  
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -49,8 +49,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "14723:9200"
+      - "15897:9300"
     restart: on-failure:5
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"]
