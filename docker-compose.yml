@@ -2,14 +2,14 @@ services:
   db:
     image: postgres:latest
     container_name: psql_products
-    restart: on-failure:5  #В случае ошибки контейнер попробует перезапуститься 5 раз
+    restart: on-failure:5  
     env_file:
-      - environment/.env
+      - elastic_search_service/environment/.env
     ports:
       - "28371:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d  # Монтируем  папку с SQL скриптами
+      - ./elastic_search_service/migrations:/docker-entrypoint-initdb.d  # Монтируем  папку с SQL скриптами
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 10s
@@ -21,7 +21,7 @@ services:
     image: minio/minio:latest
     container_name: minio
     env_file:
-      - environment/.env
+      - elastic_search_service/environment/.env
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -39,7 +39,7 @@ services:
     image: elasticsearch:8.5.0
     container_name: elasticsearch
     env_file:
-      - environment/elastic.env  # Подключаем .env
+      - elastic_search_service/environment/elastic.env  # Подключаем .env
     environment:
       - discovery.type=single-node
       - xpack.security.http.ssl.enabled=false
@@ -64,14 +64,14 @@ services:
         max-file: "3"
   
   search_service:
-    build: .
+    build: ./elastic_search_service
     container_name: search_service
     restart: always
     depends_on:
       - db
       - elasticsearch
     env_file:
-      - environment/api.env
+      - elastic_search_service/environment/api.env
     ports:
       - "51842:51842"
     command: [ "sh", "-c", "echo 'Жду 10 сек после PostgreSQL...' && sleep 10 && echo 'Жду 30 сек после Elasticsearch...' && sleep 30 && echo 'Запускаю сервис!' && ./search_service" ]
