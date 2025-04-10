@@ -1,0 +1,29 @@
+FROM golang:1.24 AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+WORKDIR /app/cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o search_service .
+
+FROM alpine:latest
+
+# Рабочая директория для запуска
+WORKDIR /app/cmd
+COPY --from=builder /app/cmd/search_service .
+
+RUN apk --no-cache add ca-certificates
+
+# Копируем env-файлы в /app/environment (как в исходниках)
+COPY --from=builder /app/environment/.env ../environment/
+COPY --from=builder /app/environment/elastic.env ../environment/ 
+COPY --from=builder /app/environment/api.env ../environment
+
+RUN chmod +x search_service
+EXPOSE 51842
+
+CMD ["sh", "-c", "pwd && ls -lah && ./search_service"]

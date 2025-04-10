@@ -1,0 +1,101 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: psql_products
+    restart: on-failure:5  
+    env_file:
+      - elastic_search_service/environment/.env
+    ports:
+      - "28371:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./elastic_search_service/migrations:/docker-entrypoint-initdb.d  # Монтируем  папку с SQL скриптами
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    env_file:
+      - elastic_search_service/environment/.env
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    ports:
+      - "29045:9000"  
+      - "29046:9001"  
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+
+  elasticsearch:
+    image: elasticsearch:8.5.0
+    container_name: elasticsearch
+    env_file:
+      - elastic_search_service/environment/elastic.env  # Подключаем .env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.http.ssl.enabled=false
+      - TZ=UTC
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - "14723:9200"
+      - "15897:9300"
+    restart: on-failure:5
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  
+  search_service:
+    build: ./elastic_search_service
+    container_name: search_service
+    restart: always
+    depends_on:
+      - db
+      - elasticsearch
+    env_file:
+      - elastic_search_service/environment/api.env
+    ports:
+      - "51842:51842"
+    command: [ "sh", "-c", "echo 'Жду 10 сек после PostgreSQL...' && sleep 10 && echo 'Жду 30 сек после Elasticsearch...' && sleep 30 && echo 'Запускаю сервис!' && ./search_service" ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:51842/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# КОНТЕЙНЕР НИЖЕ ПРОСТО ДЛЯ ПРОВЕРКИ ЗАПРОСОВ В ЭТОЙ ОБЩЕЙ СЕТИ ОН НЕ НУЖЕН ДЛЯ РАБОТЫ СЕРВИСА
+  test_curl:
+    image: alpine:latest
+    depends_on:
+      - search_service
+    command: 
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl
+        echo "Жду 55 секунд..."
+        sleep 55
+        watch -n 7 'curl -s "http://search_service:51842/search?q=наушники"'
+
+volumes:
+  pg_data:
+  minio_data:
+  elastic_data:
