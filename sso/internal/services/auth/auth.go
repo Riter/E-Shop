@@ -61,6 +61,7 @@ func New(
 	}
 }
 
+// Login users and returns token
 func (a *Auth) Login(
 	ctx context.Context,
 	email string,
@@ -155,6 +156,7 @@ func (a *Auth) RegisterNewUser(
 	return id, nil
 }
 
+// Checkes if user is admin. Return bool value
 func (a *Auth) IsAdmin(
 	ctx context.Context, userID int64,
 ) (bool, error) {
