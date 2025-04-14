@@ -12,6 +12,7 @@ import (
 
 var PsqlDB *sql.DB
 
+// данная функция создает connection pool для sql базы данных, используя конфиг из env файла
 func InitPsqlDB() {
 	cfg := config.LoadConfig()
 
