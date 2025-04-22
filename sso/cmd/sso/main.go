@@ -34,8 +34,6 @@ func main() {
 	//log.Debug("degug message")
 	//log.Error("error message")
 	//log.Warn("warn message")
-	//TODO: init app
-	//TODO: start grpc-server
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)

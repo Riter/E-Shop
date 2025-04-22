@@ -3,6 +3,8 @@ package app
 import (
 	"log/slog"
 	grpcapp "sso/internal/app/grpc"
+	"sso/internal/services/auth"
+	"sso/internal/storage/postgres"
 	"time"
 )
 
@@ -16,10 +18,14 @@ func New(
 	storagepath string,
 	totenTTL time.Duration,
 ) *App {
-	//TODO: storage
-	//TODO: init auth service(auth)
+	storage, err := postgres.New("postgres://admin:123@localhost:5432/mydb?sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
 
-	grpcApp := grpcapp.New(log, grpcPort)
+	authService := auth.New(log, storage, storage, storage, totenTTL)
+
+	grpcApp := grpcapp.New(log, authService, grpcPort)
 
 	return &App{GRPCSrv: grpcApp}
 }
