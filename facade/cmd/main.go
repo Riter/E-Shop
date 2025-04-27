@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
-	"time"
+	"fmt"
 
 	"github.com/Riter/E-Shop/internal/config"
-	"github.com/Riter/E-Shop/internal/storage/redis"
+	redisclient "github.com/Riter/E-Shop/internal/storage/redis"
+	"github.com/redis/go-redis/v9"
 )
 
 
@@ -14,33 +14,29 @@ import (
 
 func main() {
 	// Загружаем конфигурацию из переменных окружения
-	redisCfg := config.LoadRedisConfig()
-
-	// Создаем клиент Redis
-	rdb := redis.NewRedisClient(redisCfg)
-	defer rdb.Close()
-
-	// Проверяем подключение
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err := rdb.Ping(ctx).Result()
-	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+	ctx := context.Background()
+	cfg := config.LoadRedisConfig()
+    rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
+		Password: cfg.Password,
+		DB:       cfg.DB,
+	})
+    client := redisclient.NewRedisClient(rdb)
+	err := client.Ping(ctx)
+	if err !=nil{
+		panic(fmt.Sprintf("Can't connect to Redis %s", err.Error()))
 	}
 
-	log.Println("Successfully connected to Redis")
+    // Установить значение
+    if err := client.Set("mykey", "Hello from go-redis!"); err != nil {
+        panic(err)
+    }
 
-	// Пример работы с Redis
-	err = rdb.Set(ctx, "key", "value", 10*time.Minute).Err()
-	if err != nil {
-		log.Printf("Failed to set key: %v", err)
-	}
+    // Получить значение
+    value, err := client.Get("mykey")
+    if err != nil {
+        panic(err)
+    }
 
-	val, err := rdb.Get(ctx, "key").Result()
-	if err != nil {
-		log.Printf("Failed to get key: %v", err)
-	} else {
-		log.Printf("Got value from Redis: %s", val)
-	}
+    fmt.Println("Got value:", value)
 }

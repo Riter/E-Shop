@@ -1,19 +1,42 @@
-package redis
+package redis_client
 
 import (
-	"fmt"
+	"context"
 
-	"github.com/Riter/E-Shop/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
 
-func NewRedisClient(cfg *config.RedisConfig) *redis.Client {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
-		Password: cfg.Password,
-		DB:       cfg.DB,
-	})
+type RedisClient interface {
+    Get(key string) (string, error)
+    Set(key string, value interface{}) error
+	Ping(ctx context.Context) (error)
+}
 
-	return rdb
+
+type redisClient struct {
+    client *redis.Client
+    ctx    context.Context
+}
+
+// NewRedisClient создает новый клиент Redis
+func NewRedisClient(client *redis.Client) RedisClient {
+    return &redisClient{
+        client: client,
+        ctx:    context.Background(), // можно сюда передавать ctx извне, если нужно
+    }
+}
+
+// Set устанавливает значение по ключу
+func (r *redisClient) Set(key string, value interface{}) error {
+    return r.client.Set(r.ctx, key, value, 0).Err()
+}
+
+// Get получает значение по ключу
+func (r *redisClient) Get(key string) (string, error) {
+    return r.client.Get(r.ctx, key).Result()
+}
+
+func (r *redisClient) Ping(ctx context.Context) (error) {
+    return r.client.Ping(ctx).Err()
 }
