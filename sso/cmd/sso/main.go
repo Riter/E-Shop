@@ -1,12 +1,15 @@
 package main
 
 import (
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
 	"sso/internal/app"
 	"sso/internal/config"
 	"syscall"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -14,6 +17,12 @@ const (
 	envDev   = "dev"
 	envProd  = "prod"
 )
+
+func init() {
+	if err := godotenv.Load("environment/postgres.env"); err != nil {
+		log.Println("environment not found")
+	}
+}
 
 func main() {
 	cfg := config.MustLoad()

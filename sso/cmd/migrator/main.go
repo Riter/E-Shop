@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"sso/internal/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // важно!
@@ -18,8 +19,15 @@ func main() {
 	flag.StringVar(&migratorTable, "migrations-table", "migrations", "name of migrations table")
 	flag.Parse()
 
-	dbURL := fmt.Sprintf(
-		"postgres://admin:123@localhost:5432/mydb?sslmode=disable&x-migrations-table=%s",
+	pgconf := config.LoadPostgresConfig()
+
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&x-migrations-table=%s",
+		pgconf.User,
+		pgconf.Password,
+		pgconf.Host,
+		pgconf.Port,
+		pgconf.DBName,
+		pgconf.SSLMode,
 		migratorTable,
 	)
 
