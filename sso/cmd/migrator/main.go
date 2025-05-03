@@ -4,12 +4,20 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"sso/internal/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // важно!
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	if err := godotenv.Load("environment/postgres.env"); err != nil {
+		log.Println("environment not found")
+	}
+}
 
 func main() {
 	//var storagePath, migrationPath, migratorTable string
