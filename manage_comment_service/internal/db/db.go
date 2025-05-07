@@ -1,7 +1,7 @@
 package db
 
 import (
-	"comments_service/config"
+	"comments_service/internal/config"
 	"database/sql"
 	"fmt"
 	"log"
