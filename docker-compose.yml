@@ -118,8 +118,23 @@ services:
       retries: 5
       start_period: 30s
 
+  auth_postgres:
+    image: postgres:latest
+    container_name: auth_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: mydb
+    ports:
+      - "45678:5432"  
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+      - ./sso/migrations:/docker-entrypoint-initdb.d  # Добавлено для выполнения миграций
+
 volumes:
   pg_data:
   pg_comments_data:
   minio_data:
   elastic_data:
+  auth_postgres_data: 
