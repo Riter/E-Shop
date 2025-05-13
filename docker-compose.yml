@@ -130,7 +130,7 @@ services:
       - "45678:5432"  
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
-      - ./sso/migrations:/docker-entrypoint-initdb.d  # Добавлено для выполнения миграций
+      - ./sso/migrations/up:/docker-entrypoint-initdb.d  # Добавлено для выполнения миграций
 
 volumes:
   pg_data:
