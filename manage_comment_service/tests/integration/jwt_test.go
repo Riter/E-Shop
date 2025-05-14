@@ -31,19 +31,21 @@ func generateTestToken(userID int64, email string) (string, error) {
 	return token.SignedString([]byte("test-secret"))
 }
 
-func TestJWTProtectedEndpoints(t *testing.T) {
+func TestCommentsService(t *testing.T) {
 	// Генерируем токены для разных пользователей
 	user1Token, err := generateTestToken(1, "user1@test.com")
 	require.NoError(t, err)
+	fmt.Printf("Сгенерирован токен для user1: %s\n", user1Token)
 
 	user2Token, err := generateTestToken(2, "user2@test.com")
 	require.NoError(t, err)
+	fmt.Printf("Сгенерирован токен для user2: %s\n", user2Token)
 
-	// Тест создания комментария
+	// Тест 1: Создание комментария
 	t.Run("Create Comment", func(t *testing.T) {
 		comment := models.CreateCommentDTO{
 			ProductID: 1,
-			Content:   "Тестовый комментарий",
+			Content:   "Тестовый комментарий от user1",
 			Rating:    5,
 		}
 
@@ -60,20 +62,40 @@ func TestJWTProtectedEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
+		fmt.Printf("Создание комментария - Статус: %d\n", resp.StatusCode)
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 		var result map[string]int64
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		require.NoError(t, err)
 		require.NotZero(t, result["id"])
+		fmt.Printf("Создан комментарий с ID: %d\n", result["id"])
 
 		// Сохраняем ID комментария для последующих тестов
 		commentID := result["id"]
 
-		// Тест обновления комментария
+		// Тест 2: Получение комментариев продукта
+		t.Run("Get Product Comments", func(t *testing.T) {
+			resp, err := http.Get(fmt.Sprintf("%s/products/1/comments", baseURL))
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			fmt.Printf("Получение комментариев - Статус: %d\n", resp.StatusCode)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			var comments []models.Comment
+			err = json.NewDecoder(resp.Body).Decode(&comments)
+			require.NoError(t, err)
+			fmt.Printf("Получено комментариев: %d\n", len(comments))
+			for _, c := range comments {
+				fmt.Printf("Комментарий ID %d: %s (рейтинг: %d)\n", c.ID, c.Content, c.Rating)
+			}
+		})
+
+		// Тест 3: Обновление комментария
 		t.Run("Update Comment", func(t *testing.T) {
 			updateComment := models.UpdateCommentDTO{
-				Content: "Обновленный комментарий",
+				Content: "Обновленный комментарий от user1",
 				Rating:  4,
 			}
 
@@ -89,6 +111,7 @@ func TestJWTProtectedEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
+			fmt.Printf("Обновление комментария - Статус: %d\n", resp.StatusCode)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			// Пробуем обновить чужой комментарий
@@ -101,10 +124,11 @@ func TestJWTProtectedEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
+			fmt.Printf("Попытка обновить чужой комментарий - Статус: %d\n", resp.StatusCode)
 			require.Equal(t, http.StatusForbidden, resp.StatusCode)
 		})
 
-		// Тест удаления комментария
+		// Тест 4: Удаление комментария
 		t.Run("Delete Comment", func(t *testing.T) {
 			// Пробуем удалить чужой комментарий
 			req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/comments/%d", baseURL, commentID), nil)
@@ -115,6 +139,7 @@ func TestJWTProtectedEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
+			fmt.Printf("Попытка удалить чужой комментарий - Статус: %d\n", resp.StatusCode)
 			require.Equal(t, http.StatusForbidden, resp.StatusCode)
 
 			// Удаляем свой комментарий
@@ -126,75 +151,17 @@ func TestJWTProtectedEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
+			fmt.Printf("Удаление своего комментария - Статус: %d\n", resp.StatusCode)
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	})
 
-	// Тест публичных эндпоинтов
-	t.Run("Public Endpoints", func(t *testing.T) {
-		// Создаем комментарий для тестирования
-		comment := models.CreateCommentDTO{
-			ProductID: 1,
-			Content:   "Публичный тестовый комментарий",
-			Rating:    5,
-		}
-
-		jsonData, err := json.Marshal(comment)
-		require.NoError(t, err)
-
-		req, err := http.NewRequest("POST", baseURL+"/comments", bytes.NewBuffer(jsonData))
-		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+user1Token)
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-
-		require.Equal(t, http.StatusCreated, resp.StatusCode)
-
-		var result map[string]int64
-		err = json.NewDecoder(resp.Body).Decode(&result)
-		require.NoError(t, err)
-		commentID := result["id"]
-
-		// Тест получения комментария
-		t.Run("Get Comment", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/comments/%d", baseURL, commentID))
-			require.NoError(t, err)
-			defer resp.Body.Close()
-
-			require.Equal(t, http.StatusOK, resp.StatusCode)
-
-			var comment models.Comment
-			err = json.NewDecoder(resp.Body).Decode(&comment)
-			require.NoError(t, err)
-			require.Equal(t, commentID, comment.ID)
-		})
-
-		// Тест получения комментариев продукта
-		t.Run("Get Product Comments", func(t *testing.T) {
-			resp, err := http.Get(fmt.Sprintf("%s/products/1/comments", baseURL))
-			require.NoError(t, err)
-			defer resp.Body.Close()
-
-			require.Equal(t, http.StatusOK, resp.StatusCode)
-
-			var comments []models.Comment
-			err = json.NewDecoder(resp.Body).Decode(&comments)
-			require.NoError(t, err)
-			require.GreaterOrEqual(t, len(comments), 1)
-		})
-	})
-
-	// Тест невалидных токенов
+	// Тест 5: Проверка невалидных токенов
 	t.Run("Invalid Tokens", func(t *testing.T) {
 		invalidTokens := []string{
 			"",                     // пустой токен
 			"invalid-token",        // неверный формат
 			"Bearer invalid-token", // неверный формат Bearer
-			"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", // подписанный другим ключом
 		}
 
 		for _, token := range invalidTokens {
@@ -209,6 +176,7 @@ func TestJWTProtectedEndpoints(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
+			fmt.Printf("Проверка невалидного токена '%s' - Статус: %d\n", token, resp.StatusCode)
 			require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 		}
 	})

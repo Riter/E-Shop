@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"comments_service/internal/auth"
 	"comments_service/internal/jwt"
 	"comments_service/internal/models"
 	"comments_service/internal/service"
@@ -21,11 +22,15 @@ const (
 )
 
 type CommentHandler struct {
-	service *service.CommentService
+	service   *service.CommentService
+	ssoClient *auth.Client
 }
 
-func NewCommentHandler(service *service.CommentService) *CommentHandler {
-	return &CommentHandler{service: service}
+func NewCommentHandler(service *service.CommentService, ssoClient *auth.Client) *CommentHandler {
+	return &CommentHandler{
+		service:   service,
+		ssoClient: ssoClient,
+	}
 }
 
 func (h *CommentHandler) RegisterRoutes(r chi.Router) {
@@ -151,20 +156,22 @@ func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, принадлежит ли комментарий пользователю
 	existingComment, err := h.service.GetComment(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get comment", http.StatusInternalServerError)
 		return
 	}
 	if existingComment == nil {
 		http.Error(w, "Comment not found", http.StatusNotFound)
 		return
 	}
+
+	// Проверяем права доступа
 	if existingComment.UserID != userID {
 		http.Error(w, "Forbidden: you can only update your own comments", http.StatusForbidden)
 		return
 	}
 
 	if err := h.service.UpdateComment(id, comment); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to update comment", http.StatusInternalServerError)
 		return
 	}
 
@@ -189,20 +196,22 @@ func (h *CommentHandler) deleteComment(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, принадлежит ли комментарий пользователю
 	existingComment, err := h.service.GetComment(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get comment", http.StatusInternalServerError)
 		return
 	}
 	if existingComment == nil {
 		http.Error(w, "Comment not found", http.StatusNotFound)
 		return
 	}
+
+	// Проверяем права доступа
 	if existingComment.UserID != userID {
 		http.Error(w, "Forbidden: you can only delete your own comments", http.StatusForbidden)
 		return
 	}
 
 	if err := h.service.DeleteComment(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to delete comment", http.StatusInternalServerError)
 		return
 	}
 
