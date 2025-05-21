@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
-	jwtv5 "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,30 +15,7 @@ const (
 	baseURL = "http://localhost:30333"
 )
 
-// generateTestToken создает тестовый JWT токен для указанного пользователя
-func generateTestToken(userID int64, email string) (string, error) {
-	claims := jwtv5.MapClaims{
-		"uid":    userID,
-		"email":  email,
-		"app_id": 1,
-		"exp":    jwtv5.NewNumericDate(time.Now().Add(time.Hour)).Unix(),
-		"iss":    "test-suite",
-	}
-
-	token := jwtv5.NewWithClaims(jwtv5.SigningMethodHS256, claims)
-	return token.SignedString([]byte("test-secret"))
-}
-
 func TestCommentsService(t *testing.T) {
-	// Генерируем токены для разных пользователей
-	user1Token, err := generateTestToken(1, "user1@test.com")
-	require.NoError(t, err)
-	fmt.Printf("Сгенерирован токен для user1: %s\n", user1Token)
-
-	user2Token, err := generateTestToken(2, "user2@test.com")
-	require.NoError(t, err)
-	fmt.Printf("Сгенерирован токен для user2: %s\n", user2Token)
-
 	// Тест 1: Создание комментария
 	t.Run("Create Comment", func(t *testing.T) {
 		comment := models.CreateCommentDTO{
@@ -55,7 +30,7 @@ func TestCommentsService(t *testing.T) {
 		req, err := http.NewRequest("POST", baseURL+"/comments", bytes.NewBuffer(jsonData))
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+user1Token)
+		req.Header.Set("X-User-ID", "1")
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -105,7 +80,7 @@ func TestCommentsService(t *testing.T) {
 			req, err := http.NewRequest("PUT", fmt.Sprintf("%s/comments/%d", baseURL, commentID), bytes.NewBuffer(jsonData))
 			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+user1Token)
+			req.Header.Set("X-User-ID", "1")
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)
@@ -118,7 +93,7 @@ func TestCommentsService(t *testing.T) {
 			req, err = http.NewRequest("PUT", fmt.Sprintf("%s/comments/%d", baseURL, commentID), bytes.NewBuffer(jsonData))
 			require.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+user2Token)
+			req.Header.Set("X-User-ID", "2")
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
@@ -133,7 +108,7 @@ func TestCommentsService(t *testing.T) {
 			// Пробуем удалить чужой комментарий
 			req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/comments/%d", baseURL, commentID), nil)
 			require.NoError(t, err)
-			req.Header.Set("Authorization", "Bearer "+user2Token)
+			req.Header.Set("X-User-ID", "2")
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)
@@ -145,7 +120,7 @@ func TestCommentsService(t *testing.T) {
 			// Удаляем свой комментарий
 			req, err = http.NewRequest("DELETE", fmt.Sprintf("%s/comments/%d", baseURL, commentID), nil)
 			require.NoError(t, err)
-			req.Header.Set("Authorization", "Bearer "+user1Token)
+			req.Header.Set("X-User-ID", "1")
 
 			resp, err = client.Do(req)
 			require.NoError(t, err)
@@ -156,28 +131,17 @@ func TestCommentsService(t *testing.T) {
 		})
 	})
 
-	// Тест 5: Проверка невалидных токенов
-	t.Run("Invalid Tokens", func(t *testing.T) {
-		invalidTokens := []string{
-			"",                     // пустой токен
-			"invalid-token",        // неверный формат
-			"Bearer invalid-token", // неверный формат Bearer
-		}
+	// Тест 5: Проверка отсутствия заголовка X-User-ID
+	t.Run("Missing X-User-ID", func(t *testing.T) {
+		req, err := http.NewRequest("POST", baseURL+"/comments", bytes.NewBufferString("{}"))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
 
-		for _, token := range invalidTokens {
-			req, err := http.NewRequest("POST", baseURL+"/comments", bytes.NewBufferString("{}"))
-			require.NoError(t, err)
-			req.Header.Set("Content-Type", "application/json")
-			if token != "" {
-				req.Header.Set("Authorization", token)
-			}
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
 
-			resp, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-
-			fmt.Printf("Проверка невалидного токена '%s' - Статус: %d\n", token, resp.StatusCode)
-			require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-		}
+		fmt.Printf("Проверка отсутствия X-User-ID - Статус: %d\n", resp.StatusCode)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 }

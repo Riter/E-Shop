@@ -100,9 +100,9 @@ services:
         watch -n 7 'curl -s "http://search_service:51842/search?q=наушники"'
   
 # SQL БД для сервиса комментариев
-  manage_comment_CRUD:
+  manage_comment_db:
     image: postgres:latest
-    container_name: psql_comments_CRUD
+    container_name: psql_comments_crud
     restart: on-failure:5  
     env_file:
       - manage_comment_service/environment/psql.env
@@ -118,23 +118,27 @@ services:
       retries: 5
       start_period: 30s
 
-  auth_postgres:
-    image: postgres:latest
-    container_name: auth_postgres
+# Add comments service
+  comments_service:
+    build: 
+      context: ./manage_comment_service
+      dockerfile: Dockerfile
+    container_name: comments_service
     restart: always
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 123
-      POSTGRES_DB: mydb
+    depends_on:
+      manage_comment_db:
+        condition: service_healthy
     ports:
-      - "45678:5432"  
-    volumes:
-      - auth_postgres_data:/var/lib/postgresql/data
-      - ./sso/migrations/up:/docker-entrypoint-initdb.d  # Добавлено для выполнения миграций
+      - "30333:30333"
+    environment:
+      - DB_HOST=manage_comment_db
+      - DB_PORT=5432
+    env_file:
+      - manage_comment_service/environment/psql.env
+      - manage_comment_service/environment/jwt.env
 
 volumes:
   pg_data:
   pg_comments_data:
   minio_data:
   elastic_data:
-  auth_postgres_data: 

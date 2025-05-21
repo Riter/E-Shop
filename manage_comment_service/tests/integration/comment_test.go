@@ -19,7 +19,7 @@ func TestCommentCRUD(t *testing.T) {
 
 	// Создаем репозиторий и сервис
 	repo := repository.NewCommentRepository(db)
-	commentService := service.NewCommentService(repo)
+	commentService := service.NewCommentService(repo, db)
 
 	// Тест создания комментария
 	t.Run("Create Comment", func(t *testing.T) {

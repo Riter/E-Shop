@@ -1,14 +1,12 @@
 package main
 
 import (
-	"comments_service/internal/auth"
 	"comments_service/internal/db"
 	"comments_service/internal/handler"
 	"comments_service/internal/repository"
 	"comments_service/internal/service"
 	"encoding/json"
 	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -43,9 +41,6 @@ func welcomeHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	// Initialize logger
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
 	// Initialize database
 	db, err := db.InitPsqlDB()
 	if err != nil {
@@ -53,16 +48,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// Initialize SSO client
-	ssoClient, err := auth.New("localhost:44044", logger)
-	if err != nil {
-		log.Fatalf("ошибка подключения к SSO сервису: %v", err)
-	}
-
 	// Initialize dependencies
 	commentRepo := repository.NewCommentRepository(db)
-	commentService := service.NewCommentService(commentRepo)
-	commentHandler := handler.NewCommentHandler(commentService, ssoClient)
+	commentService := service.NewCommentService(commentRepo, db)
+	commentHandler := handler.NewCommentHandler(commentService)
 
 	// Initialize router
 	r := chi.NewRouter()

@@ -1,11 +1,8 @@
 package handler
 
 import (
-	"comments_service/internal/auth"
-	"comments_service/internal/jwt"
 	"comments_service/internal/models"
 	"comments_service/internal/service"
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -13,75 +10,52 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// contextKey - тип для ключей контекста
-type contextKey string
-
-const (
-	// userIDKey - ключ для хранения ID пользователя в контексте
-	userIDKey contextKey = "userID"
-)
-
 type CommentHandler struct {
-	service   *service.CommentService
-	ssoClient *auth.Client
+	service *service.CommentService
 }
 
-func NewCommentHandler(service *service.CommentService, ssoClient *auth.Client) *CommentHandler {
+func NewCommentHandler(service *service.CommentService) *CommentHandler {
 	return &CommentHandler{
-		service:   service,
-		ssoClient: ssoClient,
+		service: service,
 	}
 }
 
 func (h *CommentHandler) RegisterRoutes(r chi.Router) {
-	// Публичные маршруты (не требуют JWT)
+	// Публичные маршруты
 	r.Group(func(r chi.Router) {
 		r.Get("/comments/{id}", h.getComment)
 		r.Get("/products/{productID}/comments", h.getProductComments)
+		r.Get("/products/{productID}/rating", h.getProductRating)
 	})
 
-	// Защищенные маршруты (требуют JWT)
+	// Маршруты, требующие user_id в заголовке
 	r.Group(func(r chi.Router) {
-		r.Use(jwtAuthMiddleware)
 		r.Post("/comments", h.createComment)
 		r.Put("/comments/{id}", h.updateComment)
 		r.Delete("/comments/{id}", h.deleteComment)
 	})
 }
 
-func jwtAuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenString, err := jwt.ExtractTokenFromHeader(r.Header.Get("Authorization"))
-		if err != nil {
-			http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		claims, err := jwt.ParseToken(tokenString)
-		if err != nil {
-			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		// Добавляем userID в контекст запроса
-		ctx := context.WithValue(r.Context(), userIDKey, claims.UserID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
 func (h *CommentHandler) createComment(w http.ResponseWriter, r *http.Request) {
+	// Получаем user_id из заголовка
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		http.Error(w, "Missing X-User-ID header", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid X-User-ID header", http.StatusBadRequest)
+		return
+	}
+
 	var comment models.CreateCommentDTO
 	if err := json.NewDecoder(r.Body).Decode(&comment); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Получаем userID из JWT токена
-	userID, ok := r.Context().Value(userIDKey).(int64)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
 	comment.UserID = userID
 
 	id, err := h.service.CreateComment(comment)
@@ -132,7 +106,37 @@ func (h *CommentHandler) getProductComments(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(comments)
 }
 
+func (h *CommentHandler) getProductRating(w http.ResponseWriter, r *http.Request) {
+	productIDStr := chi.URLParam(r, "productID")
+	productID, err := strconv.ParseInt(productIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	rating, err := h.service.GetProductRating(productID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(rating)
+}
+
 func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
+	// Получаем user_id из заголовка
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		http.Error(w, "Missing X-User-ID header", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid X-User-ID header", http.StatusBadRequest)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -143,13 +147,6 @@ func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
 	var comment models.UpdateCommentDTO
 	if err := json.NewDecoder(r.Body).Decode(&comment); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем userID из JWT токена
-	userID, ok := r.Context().Value(userIDKey).(int64)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -179,17 +176,23 @@ func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CommentHandler) deleteComment(w http.ResponseWriter, r *http.Request) {
+	// Получаем user_id из заголовка
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		http.Error(w, "Missing X-User-ID header", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid X-User-ID header", http.StatusBadRequest)
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid comment ID", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем userID из JWT токена
-	userID, ok := r.Context().Value(userIDKey).(int64)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
