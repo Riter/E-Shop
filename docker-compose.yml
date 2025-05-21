@@ -84,20 +84,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-
-# КОНТЕЙНЕР НИЖЕ ПРОСТО ДЛЯ ПРОВЕРКИ ЗАПРОСОВ В ELASTIC В ОБЩЕЙ СЕТИ ОН НЕ НУЖЕН ДЛЯ РАБОТЫ СЕРВИСА
-  test_curl:
-    image: alpine:latest
-    depends_on:
-      - search_service
-    command: 
-      - sh
-      - -c
-      - |
-        apk add --no-cache curl
-        echo "Жду 55 секунд..."
-        sleep 55
-        watch -n 7 'curl -s "http://search_service:51842/search?q=наушники"'
   
 # SQL БД для сервиса комментариев
   manage_comment_db:
@@ -118,7 +104,7 @@ services:
       retries: 5
       start_period: 30s
 
-# Add comments service
+# Сервис комментариев
   comments_service:
     build: 
       context: ./manage_comment_service
@@ -135,7 +121,6 @@ services:
       - DB_PORT=5432
     env_file:
       - manage_comment_service/environment/psql.env
-      - manage_comment_service/environment/jwt.env
 
 volumes:
   pg_data:
