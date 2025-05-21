@@ -1,0 +1,28 @@
+# Бинарные файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Сборочные каталоги
+/bin/
+/build/
+
+# Кэш модулей
+/pkg/
+vendor/
+
+# Файлы Go
+*.out
+
+# IDE и редакторы
+.qodo
+.idea/
+.vscode/
+*.swp
+
+# OS специфичное
+.DS_Store
+Thumbs.db
