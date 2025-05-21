@@ -17,6 +17,7 @@ type ESClient struct {
 	Client *elasticsearch.Client
 }
 
+// данная функция создает клиент elasticsearch
 func NewESClient() (*ESClient, error) {
 	input_cfg := config.LoadEsConfig()
 	cfg := elasticsearch.Config{
@@ -39,6 +40,7 @@ func NewESClient() (*ESClient, error) {
 	return &ESClient{Client: client}, nil
 }
 
+// данная функция добавляет массив продуктов (товаров) в индекс elasticsearch
 func (es *ESClient) IndexProducts(products []models.Product) error {
 	for _, product := range products {
 		data, err := json.Marshal(product)
@@ -58,6 +60,7 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 	return nil
 }
 
+// данная функция выполняет поиск товаров в индексе elasticsearch
 func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	searchBody := map[string]interface{}{
 		"query": map[string]interface{}{

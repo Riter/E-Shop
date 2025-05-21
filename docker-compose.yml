@@ -1,4 +1,5 @@
 services:
+#Основная БД с товарами
   db:
     image: postgres:latest
     container_name: psql_products
@@ -17,6 +18,7 @@ services:
       retries: 5
       start_period: 30s
 
+#MINIO БД в которой хранятся фотграфии для товаров
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -35,6 +37,7 @@ services:
       retries: 3
       start_period: 30s
 
+#Контейнер с эластиком в котором лежит индекс и товары в нем
   elasticsearch:
     image: elasticsearch:8.5.0
     container_name: elasticsearch
@@ -63,6 +66,7 @@ services:
         max-size: "10m"
         max-file: "3"
   
+  # сервис, который объединяет вышеописанные контейнеры
   search_service:
     build: ./elastic_search_service
     container_name: search_service
@@ -80,22 +84,46 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+  
+# SQL БД для сервиса комментариев
+  manage_comment_db:
+    image: postgres:latest
+    container_name: psql_comments_crud
+    restart: on-failure:5  
+    env_file:
+      - manage_comment_service/environment/psql.env
+    ports:
+      - "32751:5432"
+    volumes:
+      - pg_comments_data:/var/lib/postgresql/data 
+      - ./manage_comment_service/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-# КОНТЕЙНЕР НИЖЕ ПРОСТО ДЛЯ ПРОВЕРКИ ЗАПРОСОВ В ЭТОЙ ОБЩЕЙ СЕТИ ОН НЕ НУЖЕН ДЛЯ РАБОТЫ СЕРВИСА
-  test_curl:
-    image: alpine:latest
+# Сервис комментариев
+  comments_service:
+    build: 
+      context: ./manage_comment_service
+      dockerfile: Dockerfile
+    container_name: comments_service
+    restart: always
     depends_on:
-      - search_service
-    command: 
-      - sh
-      - -c
-      - |
-        apk add --no-cache curl
-        echo "Жду 55 секунд..."
-        sleep 55
-        watch -n 7 'curl -s "http://search_service:51842/search?q=наушники"'
+      manage_comment_db:
+        condition: service_healthy
+    ports:
+      - "30333:30333"
+    environment:
+      - DB_HOST=manage_comment_db
+      - DB_PORT=5432
+    env_file:
+      - manage_comment_service/environment/psql.env
 
 volumes:
   pg_data:
+  pg_comments_data:
   minio_data:
   elastic_data:
