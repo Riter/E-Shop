@@ -1,5 +1,4 @@
 services:
-#Основная БД с товарами
   db:
     image: postgres:latest
     container_name: psql_products
@@ -18,7 +17,44 @@ services:
       retries: 5
       start_period: 30s
 
-#MINIO БД в которой хранятся фотграфии для товаров
+  # Kafka services
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: kafka
+    environment:
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kafka-setup:
+    image: bitnami/kafka:3.7
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      "
+      # Create the topic with 2 partitions
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic item-events --partitions 2 --replication-factor 1
+      
+      # List topics to verify
+      kafka-topics.sh --bootstrap-server kafka:9092 --list
+      "
+
+  # MinIO service
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -37,7 +73,6 @@ services:
       retries: 3
       start_period: 30s
 
-#Контейнер с эластиком в котором лежит индекс и товары в нем
   elasticsearch:
     image: elasticsearch:8.5.0
     container_name: elasticsearch
@@ -65,8 +100,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-  
-  # сервис, который объединяет вышеописанные контейнеры
+
+  # Application services
   search_service:
     build: ./elastic_search_service
     container_name: search_service
@@ -84,46 +119,50 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-  
-# SQL БД для сервиса комментариев
-  manage_comment_db:
-    image: postgres:latest
-    container_name: psql_comments_crud
-    restart: on-failure:5  
-    env_file:
-      - manage_comment_service/environment/psql.env
-    ports:
-      - "32751:5432"
-    volumes:
-      - pg_comments_data:/var/lib/postgresql/data 
-      - ./manage_comment_service/migrations:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
-# Сервис комментариев
-  comments_service:
-    build: 
-      context: ./manage_comment_service
-      dockerfile: Dockerfile
-    container_name: comments_service
-    restart: always
+  manage-item-crud:
+    build: ./manage_item_crud
     depends_on:
-      manage_comment_db:
-        condition: service_healthy
-    ports:
-      - "30333:30333"
+      kafka-setup:
+        condition: service_completed_successfully
     environment:
-      - DB_HOST=manage_comment_db
-      - DB_PORT=5432
-    env_file:
-      - manage_comment_service/environment/psql.env
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        sleep 5 &&
+        python main.py"
+      
+  manage-item-etl:
+    build: ./manage_item_etl
+    depends_on:
+      kafka-setup:
+        condition: service_completed_successfully
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    command: >
+      sh -c "
+        echo 'Waiting for Kafka to be ready...' &&
+        sleep 10 &&
+        python main.py"
+
+  # Test service
+  test_curl:
+    image: alpine:latest
+    depends_on:
+      - search_service
+    command: 
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl
+        echo "Жду 55 секунд..."
+        sleep 55
+        watch -n 7 'curl -s "http://search_service:51842/search?q=наушники"'
 
 volumes:
   pg_data:
-  pg_comments_data:
   minio_data:
   elastic_data:
