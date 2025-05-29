@@ -29,6 +29,7 @@ func New(
 		pgconf.DBName,
 		pgconf.SSLMode,
 	)
+	println(db)
 	storage, err := postgres.New(db)
 	//storage, err := postgres.New("postgres://admin:123@localhost:5432/mydb?sslmode=disable")
 	if err != nil {

@@ -70,7 +70,7 @@ func LoadConfig() *PsqlConfig {
 	return &PsqlConfig{
 		DBUser:            os.Getenv("POSTGRES_USER"),
 		DBPassword:        os.Getenv("POSTGRES_PASSWORD"),
-		DBName:            os.Getenv("POSTGRES_DB"),
+		DBName:            os.Getenv("POSTGRES_NAME"),
 		DBHost:            os.Getenv("POSTGRES_HOST"),
 		DBPort:            os.Getenv("POSTGRES_PORT"),
 		DBSSLMode:         os.Getenv("POSTGRES_SSLMODE"),
