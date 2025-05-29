@@ -1,18 +1,44 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:latest
-    container_name: my_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 123
-      POSTGRES_DB: mydb
+  postgres-sso:
+    image: postgres:15
+    container_name: postgres-sso
+    env_file:
+      sso/environment/postgres.env
+    # ports:
+    #   - "5438:5434"
+    # volumes:
+    #   - pg_data_sso:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "sso_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  migrate:
+    build: sso
+    container_name: migrate
+    restart: unless-stopped
+    depends_on:
+      postgres-sso:
+        condition: service_healthy
+    command: ["./migrate", "--migrations-path=./migrations",  "--migrations-table=migrations_tests"]
+    env_file:
+      sso/environment/postgres.env
+
+  sso:
+    build: sso
+    container_name: sso
+    depends_on:
+      postgres-sso:
+        condition: service_healthy
     ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - "8090:44044"
+    env_file:
+      sso/environment/postgres.env
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -30,10 +56,11 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-storage:/var/lib/grafana
+    # volumes:
+    #   - grafana-storage:/var/lib/grafana
     restart: unless-stopped
+
 
 volumes:
   grafana-storage:
-  postgres_data:
+  pg_data_sso:

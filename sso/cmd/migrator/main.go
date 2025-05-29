@@ -29,15 +29,16 @@ func main() {
 
 	pgconf := config.LoadPostgresConfig()
 
-	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&x-migrations-table=%s",
+	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		pgconf.User,
 		pgconf.Password,
 		pgconf.Host,
 		pgconf.Port,
 		pgconf.DBName,
 		pgconf.SSLMode,
-		migratorTable,
+		// migratorTable,
 	)
+	println(dbURL)
 
 	/*if storagePath == "" {
 		panic("storage-path is required")
@@ -52,7 +53,7 @@ func main() {
 	)
 
 	if err != nil {
-		panic(err)
+		panic("Can't init migrations " + err.Error())
 	}
 
 	if err := m.Up(); err != nil {

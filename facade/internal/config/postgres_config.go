@@ -16,12 +16,12 @@ type PostgresConfig struct {
 
 func LoadPostgresConfigFromEnv() PostgresConfig {
     return PostgresConfig{
-        Host:     os.Getenv("DB_HOST"),
-        Port:     getEnvAsInt("DB_PORT", 5432),
-        User:     os.Getenv("DB_USER"),
-        Password: os.Getenv("DB_PASSWORD"),
-        DBName:   os.Getenv("DB_NAME"),
-        SSLMode:  getEnv("DB_SSLMODE", "disable"),
+        Host:     os.Getenv("POSTGRES_HOST"),
+        Port:     getEnvAsInt("POSTGRES_PORT", 5432),
+        User:     os.Getenv("POSTGRES_USER"),
+        Password: os.Getenv("POSTGRES_PASSWORD"),
+        DBName:   os.Getenv("POSTGRES_NAME"),
+        SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"),
     }
 }
 

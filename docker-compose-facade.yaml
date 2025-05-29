@@ -62,7 +62,7 @@ services:
 
 
 
-# ######################################################
+# ###################################################
 
   facade-app:
     dns:
@@ -78,13 +78,6 @@ services:
       redis:
         condition: service_healthy
     environment:
-      # PostgreSQL config
-      DB_HOST: db
-      DB_PORT: "5432"
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: appdb
-      DB_SSLMODE: disable
 
       # Redis config
       REDIS_HOST: redis
@@ -98,25 +91,25 @@ services:
       retries: 5
       start_period: 10s
 
-  db:
-    image: postgres:15
-    container_name: postgres-db
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: appdb
-    ports:
-      - "10010:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ../elastic_search_service/migrations:/docker-entrypoint-initdb.d  
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+  # db:
+  #   image: postgres:15
+  #   container_name: postgres-db
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_NAME: appdb
+  #   ports:
+  #     - "10010:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ../elastic_search_service/migrations:/docker-entrypoint-initdb.d  
+  #   healthcheck:
+  #     test: ["CMD", "pg_isready", "-U", "postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 5s
 
   redis:
     image: redis:7

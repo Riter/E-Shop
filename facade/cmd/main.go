@@ -36,7 +36,6 @@ func main() {
 	log.Println("Successfully connected to Redis")
 
     cfg := config.LoadPostgresConfigFromEnv()
-
     dbClient, err := psq.NewPostgres(ctx, cfg)
     if err != nil {
         log.Fatalf("Ошибка подключения к БД: %v", err)
