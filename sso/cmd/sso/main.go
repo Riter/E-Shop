@@ -29,6 +29,8 @@ func init() {
 func main() {
 	cfg := config.MustLoad()
 
+	//fmt.Println(cfg)
+
 	log := setupLogger(cfg.Env)
 
 	log.Info("starting application",
@@ -39,7 +41,7 @@ func main() {
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-		if err := http.ListenAndServe(":8080", nil); err != nil {
+		if err := http.ListenAndServe(":10664", nil); err != nil {
 			log.Error("failed to start metrics server", slog.Any("err", err))
 		}
 	}()
@@ -83,3 +85,4 @@ func setupLogger(env string) *slog.Logger {
 
 	return log
 }
+
