@@ -1,7 +1,8 @@
 from enum import IntEnum
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
 
 class OperationType(IntEnum):
@@ -11,11 +12,13 @@ class OperationType(IntEnum):
 
 
 class Item(BaseModel):
-    id: Optional[UUID] = Field(default_factory=uuid4)
+    id: int
     name: str
-    description: Optional[str] = None
+    description: str
     price: float
     category: str
+    created_at: datetime
+    images: List[str]
 
 
 # --- HTTP DTOs --------------------------------------------------------------
@@ -27,7 +30,7 @@ class CreateItemRequest(BaseModel):
 
 class CreateItemResponse(BaseModel):
     status: int
-    item_id: UUID
+    item_id: int
 
 
 class ChangeItemRequest(BaseModel):
@@ -41,7 +44,7 @@ class ChangeItemResponse(BaseModel):
 
 class DeleteItemRequest(BaseModel):
     operation_type: OperationType
-    item_id: UUID
+    item_id: int
 
 
 class DeleteItemResponse(BaseModel):
