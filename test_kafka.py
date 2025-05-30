@@ -25,3 +25,5 @@ response = requests.post(url, json=data)
 print(f"Status Code: {response.status_code}")
 print(f"Response: {response.text}")
 print(f"Created item ID: {data['item']['id']}")  # Сохраняем ID для последующих операций 
+
+#   http://localhost:<порт_вашего_elastic_search_service>/search?q=Test+Product
