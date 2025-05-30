@@ -30,7 +30,7 @@ services:
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - ALLOW_PLAINTEXT_LISTENER=yes
     ports:
-      - "9091:9092"
+      - "9092:9092"
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server kafka:9092 --list"]
       interval: 5s
@@ -161,122 +161,7 @@ services:
         sleep 55
         watch -n 7 'curl -s "http://search_service:51842/search?q=наушники"'
 
-  facade-consumer-app:
-    build: facade-consumer/
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
-    container_name: go-kafka-redis-app
-    environment:
-      KAFKA_BROKERS: "kafka:9092"
-      KAFKA_TOPIC: "item-events"
-      KAFKA_GROUP_ID: "my-group"
-      REDIS_ADDR: "redis:6379"
-      REDIS_PASS: ""
-      REDIS_DB: "0"
-    depends_on:
-      kafka:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-    ports:
-      - "8080:8080"
-
-  facade-app:
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-    build: facade/
-    container_name: go-app
-    ports:
-      - "8087:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file:
-      - elastic_search_service/environment/.env
-
-
-  redis:
-    image: redis:7
-    container_name: redis-cache
-    ports:
-      - "6379:6379"
-    # volumes:
-      # - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
-
-
-  postgres-sso:
-    image: postgres:15
-    container_name: postgres-sso
-    env_file:
-      sso/environment/postgres.env
-    ports:
-      - "5438:5432"
-    # volumes:
-    #   - pg_data_sso:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "sso_user"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-
-  migrate:
-    build: sso
-    container_name: migrate
-    restart: on-failure:5
-    depends_on:
-      postgres-sso:
-        condition: service_healthy
-    command: ["./migrate", "--migrations-path=migrations",  "--migrations-table=migrations_tests"]
-    env_file:
-      sso/environment/postgres.env
-
-  sso:
-    build: sso
-    container_name: sso
-    depends_on:
-      postgres-sso:
-        condition: service_healthy
-    ports:
-      - "8090:44044"
-    env_file:
-      sso/environment/postgres.env
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    restart: unless-stopped
-  
-  grafana:
-    image: grafana/grafana-oss:latest
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    # volumes:
-    #   - grafana-storage:/var/lib/grafana
-    restart: unless-stopped
-
-# volumes:
-#   pg_data:
-#   minio_data:
-#   elastic_data:
-#   redis_data:
-
+volumes:
+  pg_data:
+  minio_data:
+  elastic_data:
