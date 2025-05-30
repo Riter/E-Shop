@@ -48,7 +48,7 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 		}
 
 		req := bytes.NewReader(data)
-		res, err := es.Client.Index("products", req, es.Client.Index.WithDocumentID(product.ID))
+		res, err := es.Client.Index("products", req, es.Client.Index.WithDocumentID(fmt.Sprintf("%d", product.ID)))
 		if err != nil {
 			return fmt.Errorf("ошибка при индексации продукта: %w", err)
 		}
@@ -136,8 +136,8 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 }
 
 // данная функция удаляет продукт из индекса elasticsearch
-func (es *ESClient) DeleteProduct(productID string) error {
-	res, err := es.Client.Delete("products", productID)
+func (es *ESClient) DeleteProduct(productID int) error {
+	res, err := es.Client.Delete("products", fmt.Sprintf("%d", productID))
 	if err != nil {
 		return fmt.Errorf("ошибка при удалении продукта: %w", err)
 	}
@@ -147,6 +147,6 @@ func (es *ESClient) DeleteProduct(productID string) error {
 		return fmt.Errorf("ошибка при удалении продукта: %s", res.String())
 	}
 
-	log.Printf("Товар %s удален из Elasticsearch", productID)
+	log.Printf("Товар %d удален из Elasticsearch", productID)
 	return nil
 }
