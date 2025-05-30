@@ -21,7 +21,8 @@ RUN apk --no-cache add ca-certificates
 # Копируем env-файлы в /app/environment (как в исходниках)
 COPY --from=builder /app/environment/.env ../environment/
 COPY --from=builder /app/environment/elastic.env ../environment/ 
-COPY --from=builder /app/environment/api.env ../environment
+COPY --from=builder /app/environment/api.env ../environment/
+COPY --from=builder /app/environment/kafka.env ../environment/
 
 RUN chmod +x search_service
 EXPOSE 51842

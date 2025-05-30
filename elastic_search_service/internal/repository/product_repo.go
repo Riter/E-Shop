@@ -19,10 +19,10 @@ func NewProductRepo(PsqlDb *sql.DB, MinIO *minio.Client) *ProductRepo {
 
 func (r *ProductRepo) GetProductsByName(name string) ([]models.Product, error) {
 	rows, err := r.PsqlDb.Query(`
-		SELECT id, name, description, price, category
+		SELECT id::text, name, description, price, category
 		FROM products
-		WHERE name ILIKE ILIKE '%' || $1 || '%', name
-	`)
+		WHERE name ILIKE '%' || $1 || '%'
+	`, name)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (r *ProductRepo) GetProductsByName(name string) ([]models.Product, error) {
 	return products, nil
 }
 
-func (r *ProductRepo) getProductImages(productID int) ([]string, error) {
+func (r *ProductRepo) getProductImages(productID string) ([]string, error) {
 	rows, err := r.PsqlDb.Query("SELECT image_url FROM product_images WHERE product_id = $1", productID)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (r *ProductRepo) GetALLProducts() ([]models.Product, error) {
 		Эта функция нужна для того чтобы получать все товары из БД (и все их текстовые характеристики),
 		при этом она не возвращает ссылкин на картинки для товаров
 	*/
-	rows, err := r.PsqlDb.Query("SELECT id, name, description, price, category, created_at FROM products")
+	rows, err := r.PsqlDb.Query("SELECT id::text, name, description, price, category, created_at FROM products")
 	if err != nil {
 		return nil, err
 	}
