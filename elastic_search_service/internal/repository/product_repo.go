@@ -21,8 +21,8 @@ func (r *ProductRepo) GetProductsByName(name string) ([]models.Product, error) {
 	rows, err := r.PsqlDb.Query(`
 		SELECT id, name, description, price, category
 		FROM products
-		WHERE name ILIKE ILIKE '%' || $1 || '%', name
-	`)
+		WHERE name ILIKE '%' || $1 || '%'
+	`, name)
 	if err != nil {
 		return nil, err
 	}

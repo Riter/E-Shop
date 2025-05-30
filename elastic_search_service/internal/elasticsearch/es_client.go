@@ -8,7 +8,6 @@ import (
 	"log"
 	"online-shop/config"
 	"online-shop/internal/models"
-	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8"
 )
@@ -49,7 +48,7 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 		}
 
 		req := bytes.NewReader(data)
-		res, err := es.Client.Index("products", req, es.Client.Index.WithDocumentID(strconv.Itoa(product.ID)))
+		res, err := es.Client.Index("products", req, es.Client.Index.WithDocumentID(fmt.Sprintf("%d", product.ID)))
 		if err != nil {
 			return fmt.Errorf("ошибка при индексации продукта: %w", err)
 		}
@@ -134,4 +133,20 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	}
 
 	return products, nil
+}
+
+// данная функция удаляет продукт из индекса elasticsearch
+func (es *ESClient) DeleteProduct(productID int) error {
+	res, err := es.Client.Delete("products", fmt.Sprintf("%d", productID))
+	if err != nil {
+		return fmt.Errorf("ошибка при удалении продукта: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return fmt.Errorf("ошибка при удалении продукта: %s", res.String())
+	}
+
+	log.Printf("Товар %d удален из Elasticsearch", productID)
+	return nil
 }
