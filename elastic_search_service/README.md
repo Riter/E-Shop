@@ -58,7 +58,7 @@ go run cmd/main.go
 **GET** `/search?q=название_товара`
 #### Пример запроса:
 ```
-http://localhost:51842/search?q=наушники
+http://localhost:51842/search?q=наушники ## для proxy
 ```
 #### Пример ответа:
 ```json

@@ -13,6 +13,9 @@ from models import (CreateItemRequest, CreateItemResponse,
                     DeleteItemRequest, DeleteItemResponse,
                     Item, OperationType)
 
+from fastapi import FastAPI
+from tracing import setup_tracer
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("manage-item-crud")
 
@@ -21,6 +24,7 @@ TOPIC = "item-events"
 PARTITION_RAW = 0  # partition для «сырых» событий
 
 app = FastAPI(title="ManageItem CRUD service")
+setup_tracer(app)
 _kafka_producer: AIOKafkaProducer | None = None
 _memory_store: Dict[int, Item] = {}
 
@@ -57,7 +61,7 @@ async def _publish_event(payload: dict, partition: int = PARTITION_RAW) -> None:
 
 
 # ---------- Endpoints -------------------------------------------------------
-@app.post("/items", response_model=CreateItemResponse)
+@app.post("/items", response_model=CreateItemResponse) ## для proxy
 async def create_item(req: CreateItemRequest):
     if req.operation_type != OperationType.CREATE:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
@@ -72,8 +76,8 @@ async def create_item(req: CreateItemRequest):
     return CreateItemResponse(status=200, item_id=item.id)
 
 
-@app.put("/items/{item_id}", response_model=ChangeItemResponse)
-async def change_item(item_id: int, req: ChangeItemRequest):
+@app.put("/items/{item_id}", response_model=ChangeItemResponse) 
+async def change_item(item_id: int, req: ChangeItemRequest): ## для proxy
     if req.operation_type != OperationType.CHANGE:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail="operation_type must be 2 (change)")
@@ -90,7 +94,7 @@ async def change_item(item_id: int, req: ChangeItemRequest):
 
 
 @app.delete("/items/{item_id}", response_model=DeleteItemResponse)
-async def delete_item(item_id: int, req: DeleteItemRequest):
+async def delete_item(item_id: int, req: DeleteItemRequest): ## для proxy
     if req.operation_type != OperationType.DELETE:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail="operation_type must be 1 (delete)")

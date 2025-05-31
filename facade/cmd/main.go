@@ -13,14 +13,55 @@ import (
 	"github.com/Riter/E-Shop/internal/storage/redis"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+    "go.opentelemetry.io/otel"
+
+    "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
+    // "go.opentelemetry.io/otel/attribute"
+    semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 )
 
+func InitTracer() func() {
+	ctx := context.Background()
+
+
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint("jaeger:4317"),
+	)
+
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("facade-service"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+
+	return func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			log.Printf("error shutting down tracer provider: %v", err)
+		}
+	}
+}
 
 
 
 func main() {
 	// Загружаем конфигурацию из переменных окружения
 	redisCfg := config.LoadRedisConfig()
+    shutdown := InitTracer()
+    defer shutdown()
+	log.Println("tracing init starting")
+	defer log.Println("tracing init done")
 
 	// Создаем клиент Redis
 	rdb := redis.NewRedisClient(redisCfg)
@@ -43,6 +84,13 @@ func main() {
         log.Fatalf("Ошибка подключения к БД: %v", err)
     }
 
+	r := chi.NewRouter()
+	r.Use(otelhttp.NewMiddleware("facade-service"))
+
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
+	})
+
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
@@ -51,8 +99,6 @@ func main() {
 			}
   	}()
 
-	r := chi.NewRouter()
-	handlers.GetProducts(ctx, dbClient, rdb)
 
 	r.Post("/products", handlers.GetProducts(ctx, dbClient, rdb))
 
