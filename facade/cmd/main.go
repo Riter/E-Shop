@@ -16,40 +16,41 @@ import (
     "go.opentelemetry.io/otel"
 
     "go.opentelemetry.io/otel/sdk/resource"
-    "go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
     "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-    "go.opentelemetry.io/otel/attribute"
+    // "go.opentelemetry.io/otel/attribute"
     semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
     "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-    "google.golang.org/grpc"
 )
 
 func InitTracer() func() {
-    ctx := context.Background()
+	ctx := context.Background()
 
-    exporter, err := otlptracegrpc.New(ctx,
-        otlptracegrpc.WithInsecure(),
-        otlptracegrpc.WithEndpoint("localhost:4317"),
-        otlptracegrpc.WithDialOption(grpc.WithBlock()),
-    )
-    if err != nil {
-        panic(err)
-    }
 
-    tp := trace.NewTracerProvider(
-        trace.WithBatcher(exporter),
-        trace.WithResource(resource.NewWithAttributes(
-            semconv.SchemaURL,
-            semconv.ServiceName("go-service"),
-            attribute.String("env", "dev"),
-        )),
-    )
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint("jaeger:4317"),
+	)
 
-    otel.SetTracerProvider(tp)
-    return func() {
-        _ = tp.Shutdown(context.Background())
-    }
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("facade-service"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+
+	return func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			log.Printf("error shutting down tracer provider: %v", err)
+		}
+	}
 }
 
 
@@ -57,6 +58,10 @@ func InitTracer() func() {
 func main() {
 	// Загружаем конфигурацию из переменных окружения
 	redisCfg := config.LoadRedisConfig()
+    shutdown := InitTracer()
+    defer shutdown()
+	log.Println("tracing init starting")
+	defer log.Println("tracing init done")
 
 	// Создаем клиент Redis
 	rdb := redis.NewRedisClient(redisCfg)
@@ -79,6 +84,13 @@ func main() {
         log.Fatalf("Ошибка подключения к БД: %v", err)
     }
 
+	r := chi.NewRouter()
+	r.Use(otelhttp.NewMiddleware("facade-service"))
+
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
+	})
+
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
@@ -86,17 +98,6 @@ func main() {
 				slog.Error("failed to start metrics server", slog.Any("err", err))
 			}
   	}()
-
-
-
-	r := chi.NewRouter()
-	r.Use(otelhttp.NewMiddleware("go-service"))
-
-	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("pong"))
-	})
-
-
 
 
 	r.Post("/products", handlers.GetProducts(ctx, dbClient, rdb))

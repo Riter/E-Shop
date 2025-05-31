@@ -7,7 +7,9 @@ import (
 
 	authgrpc "sso/internal/grpc/auth"
 
+    // "go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 type App struct {
@@ -21,7 +23,10 @@ func New(
 	authService authgrpc.Auth,
 	port int,
 ) *App {
-	gRPCServer := grpc.NewServer()
+	gRPCServer := grpc.NewServer(
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+	)
 
 	authgrpc.Register(gRPCServer, authService)
 

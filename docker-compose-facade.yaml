@@ -130,6 +130,16 @@ services:
       retries: 5
       start_period: 5s
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+
+
 volumes:
   postgres_data:
   redis_data:

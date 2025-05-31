@@ -1,0 +1,36 @@
+services:
+  sso:
+    build: sso
+    container_name: sso
+    depends_on:
+      postgres-sso:
+        condition: service_healthy
+    ports:
+      - "8027:8027"
+      - "44044:44044"
+    env_file:
+      sso/environment/postgres.env
+
+  postgres-sso:
+    image: postgres:15
+    container_name: postgres-sso
+    env_file:
+      sso/environment/postgres.env
+    ports:
+      - "5438:5432"
+    # volumes:
+    #   - pg_data_sso:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "sso_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true

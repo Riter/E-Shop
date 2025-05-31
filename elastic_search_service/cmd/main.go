@@ -15,11 +15,56 @@ import (
 	"os/signal"
 	"syscall"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
+	// "go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+
 	"github.com/go-chi/chi/v5"
 )
 
+func InitTracer() func() {
+	ctx := context.Background()
+
+
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithInsecure(),
+		otlptracegrpc.WithEndpoint("jaeger:4317"),
+	)
+
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("elastic-search-service"),
+		)),
+	)
+	otel.SetTracerProvider(tp)
+
+	return func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			log.Printf("error shutting down tracer provider: %v", err)
+		}
+	}
+}
+
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
+	shutdown := InitTracer()
+    defer shutdown()
+	log.Println("tracing init starting")
+	defer log.Println("tracing init done")
 
 	// Инициализация баз данных
 	db.InitPsqlDB()
@@ -64,6 +109,11 @@ func main() {
 
 	// Настройка HTTP сервера
 	r := chi.NewRouter()
+	r.Use(otelhttp.NewMiddleware("elastic-search-service"))
+
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
+	})
 	r.Get("/search", elasticManager.ServeHTTP)
 
 	// Настройка graceful shutdown

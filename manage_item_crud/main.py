@@ -13,6 +13,9 @@ from models import (CreateItemRequest, CreateItemResponse,
                     DeleteItemRequest, DeleteItemResponse,
                     Item, OperationType)
 
+from fastapi import FastAPI
+from tracing import setup_tracer
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("manage-item-crud")
 
@@ -21,6 +24,7 @@ TOPIC = "item-events"
 PARTITION_RAW = 0  # partition для «сырых» событий
 
 app = FastAPI(title="ManageItem CRUD service")
+setup_tracer(app)
 _kafka_producer: AIOKafkaProducer | None = None
 _memory_store: Dict[int, Item] = {}
 
