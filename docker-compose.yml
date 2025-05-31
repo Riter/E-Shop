@@ -181,7 +181,7 @@ services:
         condition: service_healthy
 
     ports:
-      - "8080:8080"
+      - "8096:8096"
 
   facade-app:
     dns:
@@ -190,7 +190,7 @@ services:
     build: facade/
     container_name: go-app
     ports:
-      - "8087:8080"
+      - "8087:8089"
     depends_on:
       db:
         condition: service_healthy
@@ -249,7 +249,7 @@ services:
       postgres-sso:
         condition: service_healthy
     ports:
-      - "8090:44044"
+      - "8027:8027"
     env_file:
       sso/environment/postgres.env
 
