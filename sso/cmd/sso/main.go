@@ -29,8 +29,6 @@ func init() {
 func main() {
 	cfg := config.MustLoad()
 
-	//fmt.Println(cfg)
-
 	log := setupLogger(cfg.Env)
 
 	log.Info("starting application",
