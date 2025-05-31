@@ -5,8 +5,8 @@ services:
     env_file:
       - elastic_search_service/environment/.env
     ports:
-      - "28371:5434"  # внешний порт 28371, внутренний 5434
-    command: ["postgres", "-c", "port=5434"]  # <- ЭТО ГЛАВНОЕ
+      - "28371:5434"
+    command: ["postgres", "-c", "port=5434"]
     volumes:
       - ./elastic_search_service/migrations:/docker-entrypoint-initdb.d
     healthcheck:
@@ -249,7 +249,7 @@ services:
       postgres-sso:
         condition: service_healthy
     ports:
-      - "8027:8027"
+      - "44044:44044"
     env_file:
       sso/environment/postgres.env
 
@@ -273,6 +273,19 @@ services:
     # volumes:
     #   - grafana-storage:/var/lib/grafana
     restart: unless-stopped
+
+  proxy-service:
+    build: ./proxy
+    container_name: proxy_service
+    env_file:
+      - ./proxy/.env
+    ports:
+      - "8002:8002"
+    depends_on:
+      - sso
+      - search_service
+      - facade-app
+
 
 # volumes:
 #   pg_data:
