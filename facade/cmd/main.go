@@ -13,8 +13,44 @@ import (
 	"github.com/Riter/E-Shop/internal/storage/redis"
 	"github.com/go-chi/chi/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+    "go.opentelemetry.io/otel"
+
+    "go.opentelemetry.io/otel/sdk/resource"
+    "go.opentelemetry.io/otel/sdk/trace"
+    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
+    "go.opentelemetry.io/otel/attribute"
+    semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+    "google.golang.org/grpc"
 )
 
+func InitTracer() func() {
+    ctx := context.Background()
+
+    exporter, err := otlptracegrpc.New(ctx,
+        otlptracegrpc.WithInsecure(),
+        otlptracegrpc.WithEndpoint("localhost:4317"),
+        otlptracegrpc.WithDialOption(grpc.WithBlock()),
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    tp := trace.NewTracerProvider(
+        trace.WithBatcher(exporter),
+        trace.WithResource(resource.NewWithAttributes(
+            semconv.SchemaURL,
+            semconv.ServiceName("go-service"),
+            attribute.String("env", "dev"),
+        )),
+    )
+
+    otel.SetTracerProvider(tp)
+    return func() {
+        _ = tp.Shutdown(context.Background())
+    }
+}
 
 
 
@@ -51,8 +87,17 @@ func main() {
 			}
   	}()
 
+
+
 	r := chi.NewRouter()
-	handlers.GetProducts(ctx, dbClient, rdb)
+	r.Use(otelhttp.NewMiddleware("go-service"))
+
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("pong"))
+	})
+
+
+
 
 	r.Post("/products", handlers.GetProducts(ctx, dbClient, rdb))
 
