@@ -20,14 +20,14 @@ func LoadPostgresConfigFromEnv() PostgresConfig {
         Port:     getEnvAsInt("POSTGRES_PORT", 5432),
         User:     os.Getenv("POSTGRES_USER"),
         Password: os.Getenv("POSTGRES_PASSWORD"),
-        DBName:   os.Getenv("POSTGRES_DB"),
+        DBName:   os.Getenv("POSTGRES_NAME"),
         SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"),
     }
 }
 
 func (cfg PostgresConfig) DSN() string {
-    return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-        cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode)
+    return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+        cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName)
 }
 
 // Вспомогательные функции
