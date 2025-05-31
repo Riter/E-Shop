@@ -20,7 +20,7 @@ func LoadPostgresConfigFromEnv() PostgresConfig {
         Port:     getEnvAsInt("POSTGRES_PORT", 5432),
         User:     os.Getenv("POSTGRES_USER"),
         Password: os.Getenv("POSTGRES_PASSWORD"),
-        DBName:   os.Getenv("POSTGRES_NAME"),
+        DBName:   os.Getenv("POSTGRES_DB"),
         SSLMode:  getEnv("POSTGRES_SSLMODE", "disable"),
     }
 }

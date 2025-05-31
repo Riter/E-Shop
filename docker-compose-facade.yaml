@@ -71,13 +71,18 @@ services:
     build: facade/
     container_name: go-app
     ports:
-      - "8086:8080"
+      - "8086:8089"
+      - "8092:10666"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
 
       # Redis config
       REDIS_HOST: redis
@@ -85,31 +90,31 @@ services:
       REDIS_PASSWORD:
       REDIS_DB: 0
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:10666/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
 
-  # db:
-  #   image: postgres:15
-  #   container_name: postgres-db
-  #   restart: always
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_NAME: appdb
-  #   ports:
-  #     - "10010:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ../elastic_search_service/migrations:/docker-entrypoint-initdb.d  
-  #   healthcheck:
-  #     test: ["CMD", "pg_isready", "-U", "postgres"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 5s
+  db:
+    image: postgres:15
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    ports:
+      - "10010:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./elastic_search_service/migrations:/docker-entrypoint-initdb.d  
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   redis:
     image: redis:7
