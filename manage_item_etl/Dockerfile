@@ -8,5 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Expose port for Prometheus metrics
+EXPOSE 10667
+
 # ETL-сервис просто запускает main.py
 CMD ["python", "main.py"]

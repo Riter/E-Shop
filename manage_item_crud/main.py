@@ -3,6 +3,8 @@ import json
 import logging
 import os
 from typing import Dict
+import threading
+import time
 
 from fastapi import FastAPI, HTTPException, status
 from aiokafka import AIOKafkaProducer
@@ -12,9 +14,26 @@ from models import (CreateItemRequest, CreateItemResponse,
                     ChangeItemRequest, ChangeItemResponse,
                     DeleteItemRequest, DeleteItemResponse,
                     Item, OperationType)
-
-from fastapi import FastAPI
 from tracing import setup_tracer
+
+# Added prometheus imports
+from prometheus_client import Counter, Summary, start_http_server
+from prometheus_client.core import CollectorRegistry
+
+# Prometheus metrics
+ITEMS_CREATED = Counter('items_created_total', 'Total number of items created')
+ITEMS_UPDATED = Counter('items_updated_total', 'Total number of items updated')
+ITEMS_DELETED = Counter('items_deleted_total', 'Total number of items deleted')
+REQUEST_LATENCY = Summary('request_latency_seconds', 'Latency of requests in seconds')
+
+# Create a new registry for this service
+SERVICE_REGISTRY = CollectorRegistry()
+
+# Register your metrics with the new registry
+SERVICE_REGISTRY.register(ITEMS_CREATED)
+SERVICE_REGISTRY.register(ITEMS_UPDATED)
+SERVICE_REGISTRY.register(ITEMS_DELETED)
+SERVICE_REGISTRY.register(REQUEST_LATENCY)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("manage-item-crud")
@@ -31,6 +50,12 @@ _memory_store: Dict[int, Item] = {}
 # ---------- FastAPI event hooks --------------------------------------------
 @app.on_event("startup")
 async def startup_event():
+    # Start Prometheus metrics server in a background thread
+    metrics_thread = threading.Thread(target=start_http_server, args=(10667, '', SERVICE_REGISTRY))
+    metrics_thread.daemon = True
+    metrics_thread.start()
+    log.info("Prometheus metrics server started on port 10667")
+
     global _kafka_producer
     _kafka_producer = AIOKafkaProducer(
         bootstrap_servers=BOOTSTRAP_SERVERS,
@@ -63,7 +88,9 @@ async def _publish_event(payload: dict, partition: int = PARTITION_RAW) -> None:
 # ---------- Endpoints -------------------------------------------------------
 @app.post("/items", response_model=CreateItemResponse) ## для proxy
 async def create_item(req: CreateItemRequest):
+    start_time = time.time()
     if req.operation_type != OperationType.CREATE:
+        REQUEST_LATENCY.observe(time.time() - start_time)
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail="operation_type must be 3 (create)")
     item = req.item
@@ -73,15 +100,20 @@ async def create_item(req: CreateItemRequest):
         "item_id": item.id,
         "item": item.model_dump()
     })
+    ITEMS_CREATED.inc()
+    REQUEST_LATENCY.observe(time.time() - start_time)
     return CreateItemResponse(status=200, item_id=item.id)
 
 
 @app.put("/items/{item_id}", response_model=ChangeItemResponse) 
 async def change_item(item_id: int, req: ChangeItemRequest): ## для proxy
+    start_time = time.time()
     if req.operation_type != OperationType.CHANGE:
+        REQUEST_LATENCY.observe(time.time() - start_time)
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail="operation_type must be 2 (change)")
     if item_id not in _memory_store:
+        REQUEST_LATENCY.observe(time.time() - start_time)
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="item not found")
 
     _memory_store[item_id] = req.item.model_copy(update={"id": item_id})
@@ -90,15 +122,20 @@ async def change_item(item_id: int, req: ChangeItemRequest): ## для proxy
         "item_id": item_id,
         "item": req.item.model_dump()
     })
+    ITEMS_UPDATED.inc()
+    REQUEST_LATENCY.observe(time.time() - start_time)
     return ChangeItemResponse(status=200)
 
 
 @app.delete("/items/{item_id}", response_model=DeleteItemResponse)
 async def delete_item(item_id: int, req: DeleteItemRequest): ## для proxy
+    start_time = time.time()
     if req.operation_type != OperationType.DELETE:
+        REQUEST_LATENCY.observe(time.time() - start_time)
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail="operation_type must be 1 (delete)")
     if item_id not in _memory_store:
+        REQUEST_LATENCY.observe(time.time() - start_time)
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="item not found")
 
     _memory_store.pop(item_id)
@@ -107,6 +144,8 @@ async def delete_item(item_id: int, req: DeleteItemRequest): ## для proxy
         "item_id": item_id,
         "item": None
     })
+    ITEMS_DELETED.inc()
+    REQUEST_LATENCY.observe(time.time() - start_time)
     return DeleteItemResponse(status=200)
 
 

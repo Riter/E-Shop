@@ -14,5 +14,8 @@ COPY . .
 # Экспонируем порт FastAPI
 EXPOSE 8000
 
+# Открываем порт для Prometheus метрик
+EXPOSE 10667
+
 # Запуск сервиса
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
