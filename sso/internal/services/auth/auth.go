@@ -11,7 +11,7 @@ import (
 	"sso/internal/storage"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	jwt_tok "github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -44,78 +44,8 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInvalidAppID       = errors.New("invalid appID")
 	ErrUserExists         = errors.New("user already exists")
-	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidToken       = errors.New("invalid token")
 )
-
-var (
-	loginAttempts = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_login_attempts_total",
-		Help: "Total login attempts",
-	})
-
-	loginSuccess = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_login_success_total",
-		Help: "Total successful logins",
-	})
-
-	loginFailures = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_login_failure_total",
-		Help: "Total failed logins",
-	})
-
-	loginBadToken = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_login_bad_token",
-		Help: "Total failed token creations",
-	})
-
-	loginDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
-		Name:    "auth_login_duration_seconds",
-		Help:    "Duration of login attempts",
-		Buckets: prometheus.DefBuckets,
-	})
-
-	registerAttempts = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_register_attempts_total",
-		Help: "Total register attempts",
-	})
-
-	registerFailure = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_register_failure_total",
-		Help: "Total failed registerations",
-	})
-
-	registerSuccess = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_register_success_total",
-		Help: "Total successful registrations",
-	})
-
-	registerDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
-		Name:    "auth_register_duration_seconds",
-		Help:    "Durationg of registrations attempts",
-		Buckets: prometheus.DefBuckets,
-	})
-
-	isadminAttempts = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_isadmin_attempts_total",
-		Help: "Total checking if user is admin",
-	})
-
-	isadminErrors = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_isadmin_errors_total",
-		Help: "Total errors while checking if admin",
-	})
-
-	isadminSuccess = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "auth_isadmin_success_total",
-		Help: "Total successful checks if admin",
-	})
-)
-
-func init() {
-	prometheus.MustRegister(loginAttempts, loginSuccess, loginFailures, loginDuration, loginBadToken,
-		registerAttempts, registerDuration, registerFailure, registerSuccess,
-		isadminAttempts, isadminErrors, isadminSuccess)
-}
 
 func New(
 	log *slog.Logger,
@@ -148,27 +78,21 @@ func (a *Auth) Login(
 
 	log.Info("attemping to login user")
 
-	timer := prometheus.NewTimer(loginDuration)
-	defer timer.ObserveDuration()
-	loginAttempts.Inc()
-
 	user, err := a.usrProvider.User(ctx, email)
 
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			a.log.Warn("user not found", sl.Err(err))
-			loginFailures.Inc()
+
 			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}
 
 		a.log.Error("failed to get user", sl.Err(err))
-		loginFailures.Inc()
+
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		loginFailures.Inc()
-
 		a.log.Info("invalid credentials", sl.Err(err))
 
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
@@ -176,7 +100,6 @@ func (a *Auth) Login(
 
 	app, err := a.appProvider.App(ctx, appID)
 	if err != nil {
-		loginFailures.Inc()
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -186,12 +109,10 @@ func (a *Auth) Login(
 
 	if err != nil {
 		a.log.Error("failed to generate token", sl.Err(err))
-		loginBadToken.Inc()
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	loginSuccess.Inc()
 	return token, nil
 }
 
@@ -210,17 +131,13 @@ func (a *Auth) RegisterNewUser(
 		slog.String("email", email),
 	)
 
-	timer := prometheus.NewTimer(registerDuration)
-	defer timer.ObserveDuration()
-	registerAttempts.Inc()
-
 	log.Info("registering user")
 
 	passHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	if err != nil {
 		log.Error("failed to generate password hash", sl.Err(err))
-		registerFailure.Inc()
+
 		return 0, fmt.Errorf("%s : %w", op, err)
 	}
 
@@ -228,17 +145,15 @@ func (a *Auth) RegisterNewUser(
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			log.Warn("user already exists", sl.Err(err))
-			registerFailure.Inc()
+
 			return 0, fmt.Errorf("%s: %w", op, ErrUserExists)
 		}
 
 		log.Error("failed to save user", sl.Err(err))
-		registerFailure.Inc()
 		return 0, fmt.Errorf("%s : %w", op, err)
 	}
 
 	log.Info("user registered")
-	registerSuccess.Inc()
 
 	return id, nil
 }
@@ -254,22 +169,82 @@ func (a *Auth) IsAdmin(
 		slog.Int64("user_id", userID),
 	)
 
-	isadminAttempts.Inc()
-
 	log.Info("checking if user is admin")
 
 	isAdmin, err := a.usrProvider.IsAdmin(ctx, userID)
 	if err != nil {
 		if errors.Is(err, storage.ErrAppNotFound) {
 			log.Warn("user not found", sl.Err(err))
-			isadminErrors.Inc()
+
 			return false, fmt.Errorf("%s: %w", op, ErrInvalidAppID)
 		}
-		isadminErrors.Inc()
+
 		return false, fmt.Errorf("%s: %w", op, err)
 	}
 
 	log.Info("checked if user is admin", slog.Bool("is_admin", isAdmin))
-	isadminSuccess.Inc()
+
 	return isAdmin, nil
+}
+
+func (a *Auth) ValidateToken(ctx context.Context, tokenString string) (int64, error) {
+	const op = "auth.ValidateToken"
+
+	// 1. Распарсить токен без валидации, чтобы вытащить app_id
+	parser := jwt_tok.NewParser(jwt_tok.WithoutClaimsValidation())
+	unverifiedToken, _, err := parser.ParseUnverified(tokenString, jwt_tok.MapClaims{})
+	if err != nil {
+		a.log.Error("failed to parse token", sl.Err(err))
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+	}
+
+	claims, ok := unverifiedToken.Claims.(jwt_tok.MapClaims)
+	if !ok {
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+	}
+
+	appIDFloat, ok := claims["app_id"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+	}
+	appID := int(appIDFloat)
+
+	// 2. Получить App по app_id
+	app, err := a.appProvider.App(ctx, appID)
+	if err != nil {
+		a.log.Error("failed to get app by ID", sl.Err(err))
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidAppID)
+	}
+
+	// 3. Провалидировать токен с подписью
+	validatedToken, err := jwt_tok.Parse(tokenString, func(t *jwt_tok.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt_tok.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("%s: unexpected signing method", op)
+		}
+		return []byte(app.Secret), nil
+	})
+	if err != nil || !validatedToken.Valid {
+		a.log.Warn("invalid token", sl.Err(err))
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+	}
+
+	validClaims, ok := validatedToken.Claims.(jwt_tok.MapClaims)
+	if !ok {
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+	}
+
+	// 4. Проверка срока действия
+	if expRaw, ok := validClaims["exp"].(float64); ok {
+		if int64(expRaw) < time.Now().Unix() {
+			return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+		}
+	}
+
+	// 5. Получение uid
+	uidFloat, ok := validClaims["uid"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("%s: %w", op, ErrInvalidToken)
+	}
+
+	return int64(uidFloat), nil
 }
