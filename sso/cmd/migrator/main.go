@@ -38,7 +38,6 @@ func main() {
 		pgconf.SSLMode,
 		// migratorTable,
 	)
-	println(dbURL)
 
 	/*if storagePath == "" {
 		panic("storage-path is required")
