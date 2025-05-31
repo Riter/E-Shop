@@ -20,10 +20,10 @@ type Cacher interface{
 	Set(ctx context.Context, mset map[string]string, expiration time.Duration)
 }
 
-func GetProductsWithCache(ctx context.Context, skus []int64, source Source, cacher Cacher) (models.ProductResponseList, error) {
+func GetProductsWithCache(ctx context.Context, skus []string, source Source, cacher Cacher) (models.ProductResponseList, error) {
 	keys := make([]string, len(skus))
 	for i, id := range skus {
-		keys[i] = strconv.FormatInt(id, 10)
+		keys[i] = id
 	}
 
 	// 1. Batch GET из Redis
@@ -38,7 +38,8 @@ func GetProductsWithCache(ctx context.Context, skus []int64, source Source, cach
 
 	for i, val := range cached {
 		if val == nil {
-			missedIDs = append(missedIDs, skus[i])
+			num, _ := strconv.Atoi(skus[i])
+			missedIDs = append(missedIDs, int64(num))
 			continue
 		}
 
@@ -79,16 +80,17 @@ func GetProductsWithCache(ctx context.Context, skus []int64, source Source, cach
 	return models.ProductResponseList{ProductList: found}, nil
 }
 
-
 func GetProducts(ctx context.Context, source Source, cacher Cacher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req models.ProductRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.SKUs) == 0 {
-			http.Error(w, "invalid or empty request", http.StatusBadRequest)
+		// Получаем все значения параметра "sku" из query
+		skus := r.URL.Query()["sku"]
+		if len(skus) == 0 {
+			http.Error(w, "missing 'sku' query parameters", http.StatusBadRequest)
 			return
 		}
 
-		result, err := GetProductsWithCache(r.Context(), req.SKUs, source, cacher)
+		// Вызываем обработку с кэшем
+		result, err := GetProductsWithCache(r.Context(), skus, source, cacher)
 		if err != nil {
 			http.Error(w, "server error: "+err.Error(), http.StatusInternalServerError)
 			return
