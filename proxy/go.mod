@@ -5,7 +5,6 @@ go 1.23
 toolchain go1.23.9
 
 require (
-	github.com/GGiovanni9152/protos v0.0.0-20250531145432-ac6eb57c5c9d
 	github.com/joho/godotenv v1.5.1
 	google.golang.org/grpc v1.72.2
 )

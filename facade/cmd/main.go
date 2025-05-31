@@ -100,7 +100,7 @@ func main() {
   	}()
 
 
-	r.Post("/products", handlers.GetProducts(ctx, dbClient, rdb))
+	r.Get("/products", handlers.GetProducts(ctx, dbClient, rdb))
 
 	// Запуск сервера
 	log.Println("Listening on :8089")
