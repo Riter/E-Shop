@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sso/internal/services/auth"
+	"sso/internal/storage"
 
 	ssov1 "github.com/GGiovanni9152/protos/gen/go/sso"
 	"google.golang.org/grpc"
@@ -30,6 +31,7 @@ type Auth interface {
 		password string,
 	) (userID int64, err error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	ValidateToken(ctx context.Context, token string) (userID int64, err error)
 }
 
 func Register(gRPC *grpc.Server, auth Auth) {
@@ -73,7 +75,7 @@ func (s *serverAPI) Register(
 
 	if err != nil {
 
-		if errors.Is(err, auth.ErrUserExists) {
+		if errors.Is(err, storage.ErrUserExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
 
@@ -93,7 +95,7 @@ func (s *serverAPI) IsAdmin(
 	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 
 	if err != nil {
-		if errors.Is(err, auth.ErrUserNotFound) {
+		if errors.Is(err, storage.ErrUserNotFound) {
 			return nil, status.Error(codes.NotFound, "user not found")
 		}
 		return nil, status.Error(codes.Internal, "internal error")
@@ -137,4 +139,23 @@ func validateIsAdmin(req *ssov1.IsAdminRequest) error {
 	}
 
 	return nil
+}
+
+func (s *serverAPI) ValidateToken(
+	ctx context.Context, req *ssov1.ValidateTokenRequest,
+) (*ssov1.ValidateTokenResponse, error) {
+	token := req.GetToken()
+	if token == "" {
+		return nil, status.Error(codes.InvalidArgument, "token is required")
+	}
+
+	userID, err := s.auth.ValidateToken(ctx, token)
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidToken) {
+			return &ssov1.ValidateTokenResponse{IsValid: false}, nil
+		}
+		return nil, status.Error(codes.Internal, "validation error")
+	}
+
+	return &ssov1.ValidateTokenResponse{IsValid: true, UserId: userID}, nil
 }
