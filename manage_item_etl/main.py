@@ -12,6 +12,8 @@ from aiokafka.structs import TopicPartition
 from prometheus_client import Counter, Summary, start_http_server
 from prometheus_client.core import CollectorRegistry
 
+from models import Item, OperationType
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("manage-item-etl")
 
@@ -40,35 +42,78 @@ SERVICE_REGISTRY.register(PROCESSING_TIME)
 
 async def process_and_forward(msg: dict, producer: AIOKafkaProducer):
     """
-    Здесь помещаем «Т» (Transform) и «L» (Load) части ETL-конвейера:
-    - enrich / очистка
-    - запись в Postgres / ElasticSearch / MinIO / S3 и т. д.
-    Сейчас просто печатаем.
+    Process item events through the ETL pipeline:
+    - Extract: Data already extracted from Kafka
+    - Transform: Validate, enrich, and format data
+    - Load: Forward to processed partition and could write to databases
     """
     start_time = time.time()
-    op = msg["operation_type"]
-    op_name = {1: "DELETE", 2: "CHANGE", 3: "CREATE"}.get(op, "?")
-    log.info("ETL received %s for item %s", op_name, msg["item_id"])
-    # TODO: T/L-логика здесь
+    
+    try:
+        # Validate operation type
+        op = msg.get("operation_type")
+        if op not in [OperationType.DELETE, OperationType.CHANGE, OperationType.CREATE]:
+            log.error(f"Invalid operation type: {op}")
+            return
+            
+        op_name = {
+            OperationType.DELETE: "DELETE", 
+            OperationType.CHANGE: "CHANGE", 
+            OperationType.CREATE: "CREATE"
+        }.get(op)
+        
+        log.info("ETL processing %s operation for item %s", op_name, msg.get("item_id"))
 
-    # далее ― отправляем в partition 1 для фасадных сервисов
-    await producer.send_and_wait(
-        TOPIC,
-        msg,
-        partition=PARTITION_PROCESSED
-    )
-    log.info("ETL: forwarded item %s to partition %d", msg["item_id"], PARTITION_PROCESSED)
-    
-    # Increment appropriate counter based on operation type
-    if op == 3:  # CREATE
-        ITEMS_PROCESSED_CREATE.inc()
-    elif op == 2:  # CHANGE
-        ITEMS_PROCESSED_CHANGE.inc()
-    elif op == 1:  # DELETE
-        ITEMS_PROCESSED_DELETE.inc()
-    
-    # Record processing time
-    PROCESSING_TIME.observe(time.time() - start_time)
+        
+        if op in [OperationType.CREATE, OperationType.CHANGE]:
+            # Validate item data is present
+            if "item" not in msg:
+                log.error(f"Missing item data for {op_name} operation")
+                return
+                
+            # Process item data
+            item_data = msg["item"]
+            
+            # 1. Normalize category to lowercase
+            if "category" in item_data:
+                item_data["category"] = item_data["category"].lower()
+                
+            # 2. Ensure price is positive
+            if "price" in item_data and item_data["price"] < 0:
+                item_data["price"] = 0.0
+
+            
+            log.info(f"Transformed item {item_data.get('id')}: category normalized, price validated")
+                
+        elif op == OperationType.DELETE:
+            # For delete operations, we just need the item_id
+            if "item_id" not in msg:
+                log.error("Missing item_id for DELETE operation")
+                return
+        
+        # Forward transformed message to processed partition
+        await producer.send_and_wait(
+            TOPIC,
+            msg,
+            partition=PARTITION_PROCESSED
+        )
+        log.info("ETL: forwarded item %s to partition %d", 
+                 msg.get("item_id") or msg.get("item", {}).get("id"), 
+                 PARTITION_PROCESSED)
+        
+        # Increment appropriate counter based on operation type
+        if op == OperationType.CREATE:
+            ITEMS_PROCESSED_CREATE.inc()
+        elif op == OperationType.CHANGE:
+            ITEMS_PROCESSED_CHANGE.inc()
+        elif op == OperationType.DELETE:
+            ITEMS_PROCESSED_DELETE.inc()
+        
+    except Exception as e:
+        log.error(f"Error processing message: {str(e)}")
+    finally:
+        # Record processing time
+        PROCESSING_TIME.observe(time.time() - start_time)
 
 
 async def main():
