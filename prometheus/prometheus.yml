@@ -14,7 +14,10 @@ scrape_configs:
       - targets: ['host.docker.internal:10666']
   - job_name: 'ETL-service'
     static_configs:
-      - targets: ['host.docker.internal:10667']
+      - targets: ['manage-item-etl:10667']
+  - job_name: 'item-crud-service'
+    static_configs:
+      - targets: ['manage-item-crud:10668']
   - job_name: 'facade-service'
     static_configs:
       - targets: ['facade-app:10671']

@@ -120,7 +120,7 @@ async def main():
     # Start Prometheus metrics server
     metrics_thread = threading.Thread(
         target=start_http_server, 
-        args=(10667, '', SERVICE_REGISTRY)
+        args=(10667, '0.0.0.0', SERVICE_REGISTRY)
     )
     metrics_thread.daemon = True
     metrics_thread.start()

@@ -128,6 +128,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     ports:
       - "8000:8000"
+      - "10668:10668"
     command: >
       sh -c "
         echo 'Waiting for Kafka to be ready...' &&
@@ -141,6 +142,8 @@ services:
         condition: service_completed_successfully
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    ports:
+      - "10667:10667"
     command: >
       sh -c "
         echo 'Waiting for Kafka to be ready...' &&
