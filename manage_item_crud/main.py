@@ -54,10 +54,10 @@ def json_datetime_serializer(obj):
 @app.on_event("startup")
 async def startup_event():
     # Start Prometheus metrics server in a background thread
-    metrics_thread = threading.Thread(target=start_http_server, args=(10667, '', SERVICE_REGISTRY))
+    metrics_thread = threading.Thread(target=start_http_server, args=(10668, '0.0.0.0', SERVICE_REGISTRY))
     metrics_thread.daemon = True
     metrics_thread.start()
-    log.info("Prometheus metrics server started on port 10667")
+    log.info("Prometheus metrics server started on port 10668")
 
     global _kafka_producer
     _kafka_producer = AIOKafkaProducer(
