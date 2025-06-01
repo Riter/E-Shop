@@ -15,14 +15,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func welcomeHandler(w http.ResponseWriter, r *http.Request) {
