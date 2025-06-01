@@ -19,7 +19,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
     "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-    // "go.opentelemetry.io/otel/attribute"
+    
     semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
     "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 )
@@ -56,18 +56,18 @@ func InitTracer() func() {
 
 
 func main() {
-	// Загружаем конфигурацию из переменных окружения
+	
 	redisCfg := config.LoadRedisConfig()
     shutdown := InitTracer()
     defer shutdown()
 	log.Println("tracing init starting")
 	defer log.Println("tracing init done")
 
-	// Создаем клиент Redis
+	
 	rdb := redis.NewRedisClient(redisCfg)
 	defer rdb.Close()
 
-	// Проверяем подключение
+	
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -102,7 +102,7 @@ func main() {
 
 	r.Get("/products", handlers.GetProducts(ctx, dbClient, rdb))
 
-	// Запуск сервера
+	
 	log.Println("Listening on :8089")
 	if err := http.ListenAndServe(":8089", r); err != nil {
 		log.Fatalf("server failed: %v", err)

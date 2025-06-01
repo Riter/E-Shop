@@ -12,11 +12,11 @@ import (
 	"github.com/Riter/E-Shop/facade-consumer/internal/redisclient"
 )
 
-// Структура сообщения
+
 type KafkaMessage struct {
     OperationType int             `json:"operation_type"`
     ItemID        int64           `json:"item_id"`
-    Item          json.RawMessage `json:"item"` // можно не парсить полностью
+    Item          json.RawMessage `json:"item"` 
 }
 
 func main() {
@@ -45,7 +45,7 @@ func main() {
             continue
         }
 
-        // Инвалидация только при DELETE (1) или CHANGE (2)
+        
         if msg.OperationType == 1 || msg.OperationType == 2 {
             key := fmt.Sprintf("%d", msg.ItemID)
             deleted, err := rdb.Del(ctx, key).Result()

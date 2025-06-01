@@ -30,7 +30,7 @@ func (cfg PostgresConfig) DSN() string {
         cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName)
 }
 
-// Вспомогательные функции
+
 func getEnv(key, fallback string) string {
     if value := os.Getenv(key); value != "" {
         return value

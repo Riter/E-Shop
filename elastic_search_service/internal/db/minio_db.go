@@ -11,7 +11,7 @@ import (
 
 var MinioClient *minio.Client
 
-// данная функция создает подключение к minio базе данных, и создает бакет для картинок в ней
+
 func InitMinio() {
 	cfg := config.LoadConfig()
 

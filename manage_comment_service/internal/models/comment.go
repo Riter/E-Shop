@@ -24,7 +24,7 @@ type UpdateCommentDTO struct {
 	Rating  int    `json:"rating"`
 }
 
-// ProductRating представляет информацию о рейтинге продукта
+
 type ProductRating struct {
 	ProductID     int64   `json:"product_id"`
 	AverageRating float64 `json:"average_rating"`

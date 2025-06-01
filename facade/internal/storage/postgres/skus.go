@@ -41,7 +41,7 @@ func (p *Postgres) GetProductsByIDs(ctx context.Context, skus []int64) ([]models
             return nil, err
         }
 
-        // Разбираем json_agg как []string
+        
         if err := json.Unmarshal(imagesRaw, &p.Images); err != nil {
             return nil, err
         }

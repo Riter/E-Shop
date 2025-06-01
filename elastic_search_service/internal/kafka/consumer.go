@@ -17,7 +17,7 @@ type Consumer struct {
 }
 
 type ProductEvent struct {
-	OperationType int             `json:"operation_type"` // 1=DELETE, 2=CHANGE, 3=CREATE
+	OperationType int             `json:"operation_type"` 
 	ItemID        int             `json:"item_id"`
 	Item          *models.Product `json:"item"`
 }
@@ -73,7 +73,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 		}
 
 		switch event.OperationType {
-		case 3: // CREATE
+		case 3: 
 			if event.Item == nil {
 				log.Printf("Error: CREATE event has nil item")
 				continue
@@ -84,7 +84,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			}
 			log.Printf("Product %d indexed in Elasticsearch", event.ItemID)
 
-		case 2: // CHANGE
+		case 2: 
 			if event.Item == nil {
 				log.Printf("Error: CHANGE event has nil item")
 				continue
@@ -95,7 +95,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			}
 			log.Printf("Product %d updated in Elasticsearch", event.ItemID)
 
-		case 1: // DELETE
+		case 1: 
 			if err := h.elastic.DeleteProduct(event.ItemID); err != nil {
 				log.Printf("Error deleting product: %v", err)
 				continue

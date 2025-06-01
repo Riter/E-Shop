@@ -20,7 +20,7 @@ class Item(BaseModel):
     images: List[str]
 
 
-# --- HTTP DTOs --------------------------------------------------------------
+
 
 class CreateItemRequest(BaseModel):
     operation_type: OperationType

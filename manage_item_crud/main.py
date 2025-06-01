@@ -17,15 +17,15 @@ from models import (CreateItemRequest, CreateItemResponse,
                     Item, OperationType)
 from tracing import setup_tracer
 
-# Added prometheus imports
+
 from prometheus_client import Counter, Summary, start_http_server
 from prometheus_client.core import CollectorRegistry
 
-# Create a new registry for this service
+
 SERVICE_REGISTRY = CollectorRegistry()
 
-# Prometheus metrics
-# Register metrics directly with the custom SERVICE_REGISTRY
+
+
 ITEMS_CREATED = Counter('items_created_total', 'Total number of items created', registry=SERVICE_REGISTRY)
 ITEMS_UPDATED = Counter('items_updated_total', 'Total number of items updated', registry=SERVICE_REGISTRY)
 ITEMS_DELETED = Counter('items_deleted_total', 'Total number of items deleted', registry=SERVICE_REGISTRY)
@@ -36,16 +36,16 @@ log = logging.getLogger("manage-item-crud")
 
 BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 TOPIC = "item-events"
-PARTITION_RAW = 0  # partition для «сырых» событий
+PARTITION_RAW = 0  
 
 app = FastAPI(title="ManageItem CRUD service")
 setup_tracer(app)
 _kafka_producer: AIOKafkaProducer | None = None
 _memory_store: Dict[int, Item] = {}
 
-# ---------- FastAPI event hooks --------------------------------------------
 
-# Helper for JSON serialization of datetime objects
+
+
 def json_datetime_serializer(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()
@@ -53,7 +53,7 @@ def json_datetime_serializer(obj):
 
 @app.on_event("startup")
 async def startup_event():
-    # Start Prometheus metrics server in a background thread
+    
     metrics_thread = threading.Thread(target=start_http_server, args=(10668, '0.0.0.0', SERVICE_REGISTRY))
     metrics_thread.daemon = True
     metrics_thread.start()
@@ -75,11 +75,11 @@ async def shutdown_event():
         log.info("Kafka producer stopped")
 
 
-# ---------- Helper ----------------------------------------------------------
+
 async def _publish_event(payload: dict, partition: int = PARTITION_RAW) -> None:
     if not _kafka_producer:
         raise RuntimeError("Kafka producer not started")
-    # отправляем в заданную партицию
+    
     await _kafka_producer.send_and_wait(
         TOPIC,
         payload,
@@ -88,8 +88,8 @@ async def _publish_event(payload: dict, partition: int = PARTITION_RAW) -> None:
     log.info("Published to partition %d: %s", partition, payload)
 
 
-# ---------- Endpoints -------------------------------------------------------
-@app.post("/items", response_model=CreateItemResponse) ## для proxy
+
+@app.post("/items", response_model=CreateItemResponse) 
 async def create_item(req: CreateItemRequest):
     start_time = time.time()
     if req.operation_type != OperationType.CREATE:
@@ -109,7 +109,7 @@ async def create_item(req: CreateItemRequest):
 
 
 @app.put("/items/{item_id}", response_model=ChangeItemResponse)
-async def change_item(item_id: int, req: ChangeItemRequest): ## для proxy
+async def change_item(item_id: int, req: ChangeItemRequest): 
     start_time = time.time()
     if req.operation_type != OperationType.CHANGE:
         REQUEST_LATENCY.observe(time.time() - start_time)
@@ -131,7 +131,7 @@ async def change_item(item_id: int, req: ChangeItemRequest): ## для proxy
 
 
 @app.delete("/items/{item_id}", response_model=DeleteItemResponse)
-async def delete_item(item_id: int, req: DeleteItemRequest): ## для proxy
+async def delete_item(item_id: int, req: DeleteItemRequest): 
     start_time = time.time()
     if req.operation_type != OperationType.DELETE:
         REQUEST_LATENCY.observe(time.time() - start_time)

@@ -48,7 +48,7 @@ var (
 	RedisGetDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "redis_get_duration_seconds",
 		Help:    "duration of Redis GET operations",
-		Buckets: prometheus.DefBuckets, // можно задать свои
+		Buckets: prometheus.DefBuckets, 
 	})
 
 	RedisSetDuration = prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -60,7 +60,7 @@ var (
 	RedisGetPayloadSize = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "redis_get_payload_size_bytes",
 		Help:    "total size of values returned from Redis",
-		Buckets: prometheus.ExponentialBuckets(100, 2, 10), // от 100 до ~50К
+		Buckets: prometheus.ExponentialBuckets(100, 2, 10), 
 	})
 
 	RedisSetPipelineLength = prometheus.NewHistogram(prometheus.HistogramOpts{

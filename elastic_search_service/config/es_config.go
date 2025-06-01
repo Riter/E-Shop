@@ -15,7 +15,7 @@ type EsConfig struct {
 	ESJavaOpts      string
 }
 
-// загрузка конфига для эластика
+
 func LoadEsConfig() *EsConfig {
 	err := godotenv.Load("../environment/elastic.env")
 	if err != nil {
