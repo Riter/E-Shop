@@ -8,10 +8,7 @@ scrape_configs:
       - targets: ['sso:10664']
   - job_name: 'comment-service'
     static_configs:
-      - targets: ['host.docker.internal:10665']
-  - job_name: 'item-service'
-    static_configs:
-      - targets: ['host.docker.internal:10666']
+      - targets: ['comments_service:10665']
   - job_name: 'ETL-service'
     static_configs:
       - targets: ['manage-item-etl:10667']

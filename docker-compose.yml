@@ -257,6 +257,44 @@ services:
     env_file:
       sso/environment/postgres.env
 
+
+# SQL БД для сервиса комментариев
+  manage_comment_db:
+    image: postgres:latest
+    container_name: psql_comments_crud
+    restart: on-failure:5  
+    env_file:
+      - manage_comment_service/environment/psql.env
+    ports:
+      - "32751:5432"
+    volumes:
+      # - pg_comments_data:/var/lib/postgresql/data 
+      - ./manage_comment_service/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# Сервис комментариев
+  comments_service:
+    build: 
+      context: ./manage_comment_service
+      dockerfile: Dockerfile
+    container_name: comments_service
+    restart: always
+    depends_on:
+      manage_comment_db:
+        condition: service_healthy
+    ports:
+      - "30333:30333"
+    environment:
+      - DB_HOST=manage_comment_db
+      - DB_PORT=5432
+    env_file:
+      - manage_comment_service/environment/psql.env
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
