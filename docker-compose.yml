@@ -118,8 +118,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    networks:
-      - monitoring
 
   manage-item-crud:
     build: ./manage_item_crud
@@ -184,8 +182,6 @@ services:
 
     ports:
       - "8096:8096"
-    networks:
-      - monitoring
 
   facade-app:
     dns:
@@ -202,8 +198,6 @@ services:
         condition: service_healthy
     env_file:
       - elastic_search_service/environment/.env
-    networks:
-      - monitoring
 
 
   redis:
@@ -258,8 +252,6 @@ services:
       - "44044:44044"
     env_file:
       sso/environment/postgres.env
-    networks:
-      - monitoring
 
   prometheus:
     image: prom/prometheus:latest
@@ -268,8 +260,6 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - monitoring
     restart: unless-stopped
   
   grafana:
@@ -302,10 +292,6 @@ services:
       - "4317:4317"    # OTLP gRPC
     environment:
       - COLLECTOR_OTLP_ENABLED=true
-
-networks:
-  monitoring:
-    driver: bridge
 
 # volumes:
 #   pg_data:
