@@ -5,6 +5,7 @@ import os
 from typing import Dict
 import threading
 import time
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, status
 from aiokafka import AIOKafkaProducer
@@ -20,20 +21,15 @@ from tracing import setup_tracer
 from prometheus_client import Counter, Summary, start_http_server
 from prometheus_client.core import CollectorRegistry
 
-# Prometheus metrics
-ITEMS_CREATED = Counter('items_created_total', 'Total number of items created')
-ITEMS_UPDATED = Counter('items_updated_total', 'Total number of items updated')
-ITEMS_DELETED = Counter('items_deleted_total', 'Total number of items deleted')
-REQUEST_LATENCY = Summary('request_latency_seconds', 'Latency of requests in seconds')
-
 # Create a new registry for this service
 SERVICE_REGISTRY = CollectorRegistry()
 
-# Register your metrics with the new registry
-SERVICE_REGISTRY.register(ITEMS_CREATED)
-SERVICE_REGISTRY.register(ITEMS_UPDATED)
-SERVICE_REGISTRY.register(ITEMS_DELETED)
-SERVICE_REGISTRY.register(REQUEST_LATENCY)
+# Prometheus metrics
+# Register metrics directly with the custom SERVICE_REGISTRY
+ITEMS_CREATED = Counter('items_created_total', 'Total number of items created', registry=SERVICE_REGISTRY)
+ITEMS_UPDATED = Counter('items_updated_total', 'Total number of items updated', registry=SERVICE_REGISTRY)
+ITEMS_DELETED = Counter('items_deleted_total', 'Total number of items deleted', registry=SERVICE_REGISTRY)
+REQUEST_LATENCY = Summary('request_latency_seconds', 'Latency of requests in seconds', registry=SERVICE_REGISTRY)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("manage-item-crud")
@@ -48,6 +44,13 @@ _kafka_producer: AIOKafkaProducer | None = None
 _memory_store: Dict[int, Item] = {}
 
 # ---------- FastAPI event hooks --------------------------------------------
+
+# Helper for JSON serialization of datetime objects
+def json_datetime_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
 @app.on_event("startup")
 async def startup_event():
     # Start Prometheus metrics server in a background thread
@@ -59,7 +62,7 @@ async def startup_event():
     global _kafka_producer
     _kafka_producer = AIOKafkaProducer(
         bootstrap_servers=BOOTSTRAP_SERVERS,
-        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        value_serializer=lambda v: json.dumps(v, default=json_datetime_serializer).encode("utf-8"),
     )
     await _kafka_producer.start()
     log.info("Kafka producer started")
@@ -105,7 +108,7 @@ async def create_item(req: CreateItemRequest):
     return CreateItemResponse(status=200, item_id=item.id)
 
 
-@app.put("/items/{item_id}", response_model=ChangeItemResponse) 
+@app.put("/items/{item_id}", response_model=ChangeItemResponse)
 async def change_item(item_id: int, req: ChangeItemRequest): ## для proxy
     start_time = time.time()
     if req.operation_type != OperationType.CHANGE:
