@@ -94,7 +94,7 @@ func main() {
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
-			if err := http.ListenAndServe(":10666", nil); err != nil {
+			if err := http.ListenAndServe(":10671", nil); err != nil {
 				slog.Error("failed to start metrics server", slog.Any("err", err))
 			}
   	}()
