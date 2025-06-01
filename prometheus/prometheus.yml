@@ -5,14 +5,14 @@ global:
 scrape_configs:
   - job_name: 'auth-service'
     static_configs:
-      - targets: ['host.docker.internal:10664']
+      - targets: ['172.17.0.1:10664']
   - job_name: 'comment-service'
     static_configs:
-      - targets: ['host.docker.internal:10665']
+      - targets: ['172.17.0.1:10665']
   - job_name: 'item-service'
     static_configs:
-      - targets: ['host.docker.internal:10666']
+      - targets: ['172.17.0.1:10666']
   - job_name: 'ETL-service'
     static_configs:
-      - targets: ['host.docker.internal:10667']
+      - targets: ['172.17.0.1:10667']
 
