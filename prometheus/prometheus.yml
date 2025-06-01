@@ -1,18 +1,21 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  scrape_timeout: 50s 
 
 scrape_configs:
   - job_name: 'auth-service'
+    metrics_path: /metrics
     static_configs:
-      - targets: ['172.17.0.1:10664']
-  - job_name: 'comment-service'
+      - targets: ['sso:10664']
+    
+  - job_name: 'search-service'
+    metrics_path: /metrics
     static_configs:
-      - targets: ['172.17.0.1:10665']
-  - job_name: 'item-service'
+      - targets: ['search_service:10667']
+    
+  - job_name: 'facade-app'
+    metrics_path: /metrics
     static_configs:
-      - targets: ['172.17.0.1:10666']
-  - job_name: 'ETL-service'
-    static_configs:
-      - targets: ['172.17.0.1:10667']
+      - targets: ['go-app:10666']
 
