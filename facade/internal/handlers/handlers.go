@@ -26,7 +26,7 @@ func GetProductsWithCache(ctx context.Context, skus []string, source Source, cac
 		keys[i] = id
 	}
 
-	// 1. Batch GET из Redis
+	
 	cached, err := cacher.Get(ctx, keys...)
 	if err != nil {
 		return models.ProductResponseList{}, err
@@ -34,7 +34,7 @@ func GetProductsWithCache(ctx context.Context, skus []string, source Source, cac
 
 	var found []models.ProductResponse
 	var missedIDs []int64
-	mset := make(map[string]string) // для последующего кэширования
+	mset := make(map[string]string) 
 
 	for i, val := range cached {
 		if val == nil {
@@ -45,13 +45,13 @@ func GetProductsWithCache(ctx context.Context, skus []string, source Source, cac
 
 		var p models.ProductResponse
 		if err := json.Unmarshal([]byte(val.(string)), &p); err != nil {
-			// Не добавляем если ошибка
+			
 			return models.ProductResponseList{}, err
 		}
 		found = append(found, p)
 	}
 
-	// 2. Если есть пропущенные — добираем из БД
+	
 	if len(missedIDs) > 0 {
 		dbResults, err := source.GetProductsByIDs(ctx, missedIDs)
 		if err != nil {
@@ -61,7 +61,7 @@ func GetProductsWithCache(ctx context.Context, skus []string, source Source, cac
 		for _, p := range dbResults {
 			found = append(found, p)
 
-			// Сериализуем и готовим к Set
+			
 			raw, err := json.Marshal(p)
 			if err!=nil{
 				return models.ProductResponseList{}, err
@@ -70,7 +70,7 @@ func GetProductsWithCache(ctx context.Context, skus []string, source Source, cac
 			mset[key] = string(raw)
 		}
 
-		// 3. Batch SET в Redis с TTL (пример: 5 минут)
+		
 		ctx = context.WithoutCancel(ctx)
 		log.Print("mset:", mset)
 		go cacher.Set(ctx, mset, time.Minute*5)
@@ -82,14 +82,14 @@ func GetProductsWithCache(ctx context.Context, skus []string, source Source, cac
 
 func GetProducts(ctx context.Context, source Source, cacher Cacher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Получаем все значения параметра "sku" из query
+		
 		skus := r.URL.Query()["sku"]
 		if len(skus) == 0 {
 			http.Error(w, "missing 'sku' query parameters", http.StatusBadRequest)
 			return
 		}
 
-		// Вызываем обработку с кэшем
+		
 		result, err := GetProductsWithCache(r.Context(), skus, source, cacher)
 		if err != nil {
 			http.Error(w, "server error: "+err.Error(), http.StatusInternalServerError)

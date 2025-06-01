@@ -14,12 +14,12 @@ type ElasticManager struct {
 	Elastic *elasticsearch.ESClient
 }
 
-// функция создает elastic manager который содержит в себе репозиторий для продуктов и клиент для поиска товаров в нем
+
 func NewElasticManager(repo *repository.ProductRepo, elastic *elasticsearch.ESClient) *ElasticManager {
 	return &ElasticManager{Repo: repo, Elastic: elastic}
 }
 
-// функция синхронизирует товары в sql БД с индексом elasticsearch, ее придется рефакторить если БД будет изменена
+
 func (s *ElasticManager) SyncProductsToElasticSearch() error {
 	products, err := s.Repo.GetALLProducts()
 	if err != nil {
@@ -37,7 +37,7 @@ func (s *ElasticManager) SyncProductsToElasticSearch() error {
 	return nil
 }
 
-// функция включает переодическую синхронизацию sql БД с elasticsearch
+
 func (s *ElasticManager) EnablePeriodicSync(minutes uint) {
 	err := s.SyncProductsToElasticSearch()
 	if err != nil {

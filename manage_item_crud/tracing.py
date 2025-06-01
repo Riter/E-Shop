@@ -1,4 +1,4 @@
-# tracing.py
+
 from opentelemetry import trace
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -18,6 +18,6 @@ def setup_tracer(app):
     span_processor = BatchSpanProcessor(otlp_exporter)
     provider.add_span_processor(span_processor)
 
-    # Включаем трассировку FastAPI
+    
     FastAPIInstrumentor.instrument_app(app)
 

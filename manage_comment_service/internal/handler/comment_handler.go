@@ -21,14 +21,14 @@ func NewCommentHandler(service *service.CommentService) *CommentHandler {
 }
 
 func (h *CommentHandler) RegisterRoutes(r chi.Router) {
-	// Публичные маршруты
+	
 	r.Group(func(r chi.Router) {
 		r.Get("/comments/{id}", h.getComment)
 		r.Get("/products/{productID}/comments", h.getProductComments)
 		r.Get("/products/{productID}/rating", h.getProductRating)
 	})
 
-	// Маршруты, требующие user_id в заголовке
+	
 	r.Group(func(r chi.Router) {
 		r.Post("/comments", h.createComment)
 		r.Put("/comments/{id}", h.updateComment)
@@ -37,7 +37,7 @@ func (h *CommentHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *CommentHandler) createComment(w http.ResponseWriter, r *http.Request) {
-	// Получаем user_id из заголовка
+	
 	userIDStr := r.Header.Get("X-User-ID")
 	if userIDStr == "" {
 		http.Error(w, "Missing X-User-ID header", http.StatusBadRequest)
@@ -124,7 +124,7 @@ func (h *CommentHandler) getProductRating(w http.ResponseWriter, r *http.Request
 }
 
 func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
-	// Получаем user_id из заголовка
+	
 	userIDStr := r.Header.Get("X-User-ID")
 	if userIDStr == "" {
 		http.Error(w, "Missing X-User-ID header", http.StatusBadRequest)
@@ -150,7 +150,7 @@ func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем, принадлежит ли комментарий пользователю
+	
 	existingComment, err := h.service.GetComment(id)
 	if err != nil {
 		http.Error(w, "Failed to get comment", http.StatusInternalServerError)
@@ -161,7 +161,7 @@ func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем права доступа
+	
 	if existingComment.UserID != userID {
 		http.Error(w, "Forbidden: you can only update your own comments", http.StatusForbidden)
 		return
@@ -176,7 +176,7 @@ func (h *CommentHandler) updateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CommentHandler) deleteComment(w http.ResponseWriter, r *http.Request) {
-	// Получаем user_id из заголовка
+	
 	userIDStr := r.Header.Get("X-User-ID")
 	if userIDStr == "" {
 		http.Error(w, "Missing X-User-ID header", http.StatusBadRequest)
@@ -196,7 +196,7 @@ func (h *CommentHandler) deleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем, принадлежит ли комментарий пользователю
+	
 	existingComment, err := h.service.GetComment(id)
 	if err != nil {
 		http.Error(w, "Failed to get comment", http.StatusInternalServerError)
@@ -207,7 +207,7 @@ func (h *CommentHandler) deleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Проверяем права доступа
+	
 	if existingComment.UserID != userID {
 		http.Error(w, "Forbidden: you can only delete your own comments", http.StatusForbidden)
 		return

@@ -25,9 +25,9 @@ type Config struct {
 	DBMinioEndpoint  string
 }
 
-// эта функция извлекает кофиг баз данных из env файла
-// базы данных созданы для примера, возможно придется поменять расположение env файла или переменные если кто-то
-// сделает реальные бд для которых будут другие креды
+
+
+
 func LoadConfig() *Config {
 	err := godotenv.Load("../environment/.env")
 	if err != nil {

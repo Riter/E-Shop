@@ -22,23 +22,23 @@ type PsqlConfig struct {
 }
 
 func findConfigFile() string {
-	// Начинаем поиск от текущей директории
+	
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("ошибка при получении текущей директории: %v", err)
 	}
 
-	// Ищем файл конфигурации, поднимаясь вверх по дереву директорий
+	
 	for {
 		configPath := filepath.Join(dir, "environment", "psql.env")
 		if _, err := os.Stat(configPath); err == nil {
 			return configPath
 		}
 
-		// Поднимаемся на уровень выше
+		
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			// Достигли корня файловой системы
+			
 			log.Fatal("файл конфигурации psql.env не найден")
 		}
 		dir = parent

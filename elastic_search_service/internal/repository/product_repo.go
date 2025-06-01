@@ -65,10 +65,7 @@ func (r *ProductRepo) getProductImages(productID int) ([]string, error) {
 }
 
 func (r *ProductRepo) GetALLProducts() ([]models.Product, error) {
-	/*
-		Эта функция нужна для того чтобы получать все товары из БД (и все их текстовые характеристики),
-		при этом она не возвращает ссылкин на картинки для товаров
-	*/
+
 	rows, err := r.PsqlDb.Query("SELECT id, name, description, price, category, created_at FROM products")
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ type ESClient struct {
 	Client *elasticsearch.Client
 }
 
-// данная функция создает клиент elasticsearch
+
 func NewESClient() (*ESClient, error) {
 	input_cfg := config.LoadEsConfig()
 	cfg := elasticsearch.Config{
@@ -39,7 +39,7 @@ func NewESClient() (*ESClient, error) {
 	return &ESClient{Client: client}, nil
 }
 
-// данная функция добавляет массив продуктов (товаров) в индекс elasticsearch
+
 func (es *ESClient) IndexProducts(products []models.Product) error {
 	for _, product := range products {
 		data, err := json.Marshal(product)
@@ -59,7 +59,7 @@ func (es *ESClient) IndexProducts(products []models.Product) error {
 	return nil
 }
 
-// данная функция выполняет поиск товаров в индексе elasticsearch
+
 func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	searchBody := map[string]interface{}{
 		"query": map[string]interface{}{
@@ -69,24 +69,24 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 						"multi_match": map[string]interface{}{
 							"query":     query,
 							"fields":    []string{"name^3", "description^2", "category"},
-							"fuzziness": "AUTO", // Позволяет Elastic прощать опечатки
+							"fuzziness": "AUTO", 
 						},
 					},
-					// Поиск по префиксу (autocomplete) — находит товары по началу слова
+					
 					{
 						"prefix": map[string]interface{}{
 							"name": map[string]interface{}{
 								"value": query,
-								"boost": 2, // Усиливаем вес, чтобы совпадения по имени ценились выше
+								"boost": 2, 
 							},
 						},
 					},
-					// Поиск по фразе с перестановкой слов
+					
 					{
 						"match_phrase": map[string]interface{}{
 							"name": map[string]interface{}{
 								"query": query,
-								"slop":  2, // Разрешает слова стоять рядом, но в разном порядке
+								"slop":  2, 
 							},
 						},
 					},
@@ -135,7 +135,7 @@ func (es *ESClient) SearchProducts(query string) ([]models.Product, error) {
 	return products, nil
 }
 
-// данная функция удаляет продукт из индекса elasticsearch
+
 func (es *ESClient) DeleteProduct(productID int) error {
 	res, err := es.Client.Delete("products", fmt.Sprintf("%d", productID))
 	if err != nil {

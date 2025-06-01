@@ -10,18 +10,18 @@ import (
 )
 
 func TestCommentCRUD(t *testing.T) {
-	// Инициализация БД
+	
 	db, err := db.InitPsqlDB()
 	if err != nil {
 		t.Fatalf("ошибка подключения к базе данных: %v", err)
 	}
 	defer db.Close()
 
-	// Создаем репозиторий и сервис
+	
 	repo := repository.NewCommentRepository(db)
 	commentService := service.NewCommentService(repo, db)
 
-	// Тест создания комментария
+	
 	t.Run("Create Comment", func(t *testing.T) {
 		createComment := models.CreateCommentDTO{
 			UserID:    1,
@@ -36,7 +36,7 @@ func TestCommentCRUD(t *testing.T) {
 		}
 		t.Logf("Создан комментарий с ID: %d", commentID)
 
-		// Проверяем, что комментарий создался
+		
 		comment, err := commentService.GetComment(commentID)
 		if err != nil {
 			t.Fatalf("ошибка получения комментария: %v", err)
@@ -49,9 +49,9 @@ func TestCommentCRUD(t *testing.T) {
 		}
 	})
 
-	// Тест получения комментариев продукта
+	
 	t.Run("Get Product Comments", func(t *testing.T) {
-		// Создаем несколько тестовых комментариев
+		
 		for i := 1; i <= 3; i++ {
 			createComment := models.CreateCommentDTO{
 				UserID:    int64(i),
@@ -65,21 +65,21 @@ func TestCommentCRUD(t *testing.T) {
 			}
 		}
 
-		// Получаем все комментарии для продукта
+		
 		comments, err := commentService.GetProductComments(1)
 		if err != nil {
 			t.Fatalf("ошибка получения комментариев продукта: %v", err)
 		}
 
-		// Проверяем, что получили все комментарии
+		
 		if len(comments) < 3 {
 			t.Errorf("ожидалось минимум 3 комментария, получено %d", len(comments))
 		}
 	})
 
-	// Тест обновления комментария
+	
 	t.Run("Update Comment", func(t *testing.T) {
-		// Создаем комментарий для обновления
+		
 		createComment := models.CreateCommentDTO{
 			UserID:    1,
 			ProductID: 1,
@@ -91,7 +91,7 @@ func TestCommentCRUD(t *testing.T) {
 			t.Fatalf("ошибка создания комментария для обновления: %v", err)
 		}
 
-		// Обновляем комментарий
+		
 		updateComment := models.UpdateCommentDTO{
 			Content: "Обновленный комментарий",
 			Rating:  5,
@@ -101,7 +101,7 @@ func TestCommentCRUD(t *testing.T) {
 			t.Fatalf("ошибка обновления комментария: %v", err)
 		}
 
-		// Проверяем, что комментарий обновился
+		
 		updatedComment, err := commentService.GetComment(commentID)
 		if err != nil {
 			t.Fatalf("ошибка получения обновленного комментария: %v", err)
@@ -114,9 +114,9 @@ func TestCommentCRUD(t *testing.T) {
 		}
 	})
 
-	// Тест удаления комментария
+	
 	t.Run("Delete Comment", func(t *testing.T) {
-		// Создаем комментарий для удаления
+		
 		createComment := models.CreateCommentDTO{
 			UserID:    1,
 			ProductID: 1,
@@ -128,13 +128,13 @@ func TestCommentCRUD(t *testing.T) {
 			t.Fatalf("ошибка создания комментария для удаления: %v", err)
 		}
 
-		// Удаляем комментарий
+		
 		err = commentService.DeleteComment(commentID)
 		if err != nil {
 			t.Fatalf("ошибка удаления комментария: %v", err)
 		}
 
-		// Проверяем, что комментарий удален
+		
 		deletedComment, err := commentService.GetComment(commentID)
 		if err != nil {
 			t.Fatalf("ошибка при проверке удаления: %v", err)
