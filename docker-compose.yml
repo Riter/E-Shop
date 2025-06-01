@@ -194,6 +194,7 @@ services:
     container_name: go-app
     ports:
       - "8087:8089"
+      - "10671:10671"
     depends_on:
       db:
         condition: service_healthy

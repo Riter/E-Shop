@@ -5,7 +5,7 @@ global:
 scrape_configs:
   - job_name: 'auth-service'
     static_configs:
-      - targets: ['host.docker.internal:10664']
+      - targets: ['sso:10664']
   - job_name: 'comment-service'
     static_configs:
       - targets: ['host.docker.internal:10665']
@@ -18,4 +18,7 @@ scrape_configs:
   - job_name: 'item-crud-service'
     static_configs:
       - targets: ['manage-item-crud:10668']
+  - job_name: 'facade-service'
+    static_configs:
+      - targets: ['facade-app:10671']
 
